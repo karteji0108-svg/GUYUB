@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="id" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Profil | GUYUB</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: "Plus Jakarta Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  </style>
+</head>
+
+<body class="h-full bg-slate-950 text-slate-100 overflow-y-auto">
+  <!-- Background -->
+  <div class="fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-950 to-emerald-950/35"></div>
+    <div class="absolute -top-32 -right-24 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl"></div>
+    <div class="absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-sky-500/10 blur-3xl"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-20 border-b border-white/10 bg-slate-950/60 backdrop-blur-xl">
+    <div class="mx-auto max-w-md px-5 py-4 flex items-center justify-between gap-3">
+      <div>
+        <div class="text-sm font-extrabold tracking-tight">Profil</div>
+        <div id="subText" class="text-[11px] text-slate-300/80">Memuat…</div>
+      </div>
+      <button id="btnLogout" class="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-extrabold hover:bg-white/10">
+        Logout
+      </button>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-md px-5 pb-28 pt-5 space-y-5">
+    <!-- Card Identity -->
+    <section class="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="h-12 w-12 rounded-2xl border border-white/10 bg-white/5 flex items-center justify-center">
+            <span class="font-extrabold text-lg">G</span>
+          </div>
+          <div class="min-w-0">
+            <div id="nameText" class="text-lg font-extrabold tracking-tight truncate">—</div>
+            <div id="emailText" class="mt-1 text-[11px] text-slate-300/80 truncate">—</div>
+            <div id="uidText" class="mt-1 text-[11px] text-slate-400 truncate">—</div>
+          </div>
+        </div>
+
+        <div class="text-right">
+          <div class="text-[11px] text-slate-400">Role</div>
+          <div id="roleChip" class="mt-1 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-bold">
+            —
+          </div>
+          <div class="mt-2 text-[11px] text-slate-400">Status</div>
+          <div id="statusChip" class="mt-1 inline-flex items-center rounded-full border border-white/10 bg-slate-950/30 px-3 py-1 text-[11px] font-bold">
+            —
+          </div>
+        </div>
+      </div>
+
+      <div id="pendingBox" class="hidden mt-4 rounded-2xl border border-amber-300/20 bg-amber-500/10 p-4">
+        <div class="text-sm font-extrabold text-amber-100">Menunggu verifikasi</div>
+        <div class="mt-1 text-xs text-amber-100/80">
+          Jika kamu mengajukan sebagai pengurus, tunggu admin menyetujui.
+        </div>
+      </div>
+    </section>
+
+    <!-- Edit Profile -->
+    <section class="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
+      <div class="flex items-center justify-between">
+        <div class="text-sm font-extrabold">Data Profil</div>
+        <button id="btnSave" class="rounded-2xl bg-white px-4 py-2 text-xs font-extrabold text-slate-950 disabled:opacity-60">
+          Simpan
+        </button>
+      </div>
+
+      <div id="alert" class="hidden mt-4 rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-xs text-slate-200"></div>
+
+      <div class="mt-5 space-y-4">
+        <div>
+          <label class="text-xs font-semibold text-slate-300">Nama</label>
+          <input id="name" type="text"
+            class="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20"
+            placeholder="Nama lengkap" />
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-300">No. HP</label>
+          <input id="phone" type="tel" inputmode="tel"
+            class="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20"
+            placeholder="+62…" />
+          <div class="mt-2 text-[11px] text-slate-400">
+            Tips: format disarankan +62xxxx
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs font-semibold text-slate-300">RT</label>
+            <input id="rt" type="text"
+              class="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20"
+              placeholder="03" />
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-300">RW</label>
+            <input id="rw" type="text"
+              class="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20"
+              placeholder="05" />
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-300">Alamat detail</label>
+          <input id="addressDetail" type="text"
+            class="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20"
+            placeholder="Jl..., No..., Patokan..." />
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-300">Kode Lingkungan</label>
+          <input id="neighborhoodId" type="text"
+            class="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20"
+            placeholder="NEIGH_001" />
+          <div class="mt-2 text-[11px] text-slate-400">
+            Biasanya diisi/ditetapkan oleh pengurus. Kalau kamu tahu kodenya, boleh isi.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Request Role -->
+    <section class="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
+      <div class="text-sm font-extrabold">Ajukan Role Pengurus</div>
+      <div class="mt-1 text-xs text-slate-300/80">
+        Jika kamu pengurus RT/PKK/KT, ajukan role di sini. Admin akan memverifikasi.
+      </div>
+
+      <div class="mt-4 space-y-3">
+        <select id="requestedRole"
+          class="w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20">
+          <option value="">— Pilih role —</option>
+          <optgroup label="RT">
+            <option value="rt_ketua">RT - Ketua</option>
+            <option value="rt_sekretaris">RT - Sekretaris</option>
+            <option value="rt_bendahara">RT - Bendahara</option>
+          </optgroup>
+          <optgroup label="PKK">
+            <option value="pkk_ketua">PKK - Ketua</option>
+            <option value="pkk_sekretaris">PKK - Sekretaris</option>
+            <option value="pkk_bendahara">PKK - Bendahara</option>
+            <option value="pkk_pokja">PKK - Koordinator Pokja</option>
+          </optgroup>
+          <optgroup label="Karang Taruna">
+            <option value="kt_ketua">KT - Ketua</option>
+            <option value="kt_wakil">KT - Wakil Ketua</option>
+            <option value="kt_sekretaris">KT - Sekretaris</option>
+            <option value="kt_bendahara">KT - Bendahara</option>
+            <option value="kt_koor_sie">KT - Koordinator Sie</option>
+          </optgroup>
+        </select>
+
+        <input id="requestNote" type="text"
+          class="w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20"
+          placeholder="Catatan (opsional): Pengurus periode 2026" />
+
+        <button id="btnRequest" class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-extrabold hover:bg-white/10 disabled:opacity-60">
+          Ajukan
+        </button>
+
+        <div id="reqAlert" class="hidden rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-xs text-slate-200"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Bottom Nav -->
+  <nav class="fixed bottom-0 left-0 right-0 z-30">
+    <div class="mx-auto max-w-md px-5 pb-5">
+      <div class="rounded-3xl border border-white/10 bg-slate-950/60 backdrop-blur-xl p-2">
+        <div class="grid grid-cols-5 gap-2 text-[11px]">
+          <a class="rounded-2xl px-2 py-3 text-center text-slate-300/80 hover:bg-white/5" href="/app/home.html">Home</a>
+          <a class="rounded-2xl px-2 py-3 text-center text-slate-300/80 hover:bg-white/5" href="/app/agenda.html">Agenda</a>
+          <a class="rounded-2xl px-2 py-3 text-center text-slate-300/80 hover:bg-white/5" href="/app/kas.html">Kas</a>
+          <a class="rounded-2xl px-2 py-3 text-center text-slate-300/80 hover:bg-white/5" href="/app/aduan.html">Aduan</a>
+          <a class="rounded-2xl bg-white/10 px-2 py-3 text-center font-extrabold" href="/app/profil.html">Profil</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <script>
+    const subText = document.getElementById("subText");
+    const alertBox = document.getElementById("alert");
+    const reqAlert = document.getElementById("reqAlert");
+
+    const nameText = document.getElementById("nameText");
+    const emailText = document.getElementById("emailText");
+    const uidText = document.getElementById("uidText");
+    const roleChip = document.getElementById("roleChip");
+    const statusChip = document.getElementById("statusChip");
+    const pendingBox = document.getElementById("pendingBox");
+
+    const btnSave = document.getElementById("btnSave");
+    const btnRequest = document.getElementById("btnRequest");
+
+    function prettyRole(role) {
+      return (role || "warga").replaceAll("_", " ");
+    }
+
+    function showAlert(msg) {
+      alertBox.textContent = msg;
+      alertBox.classList.remove("hidden");
+    }
+    function hideAlert() {
+      alertBox.classList.add("hidden");
+      alertBox.textContent = "";
+    }
+
+    function showReqAlert(msg) {
+      reqAlert.textContent = msg;
+      reqAlert.classList.remove("hidden");
+    }
+    function hideReqAlert() {
+      reqAlert.classList.add("hidden");
+      reqAlert.textContent = "";
+    }
+
+    function setSaving(v) {
+      btnSave.disabled = v;
+      btnSave.textContent = v ? "Menyimpan…" : "Simpan";
+    }
+
+    function setRequesting(v) {
+      btnRequest.disabled = v;
+      btnRequest.textContent = v ? "Mengirim…" : "Ajukan";
+    }
+  </script>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    // ✅ GANTI sesuai Firebase kamu
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    const ROUTES = {
+      login: "/login.html",
+      register: "/register.html"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUser = null;
+    let currentProfile = null;
+
+    function go(path) { window.location.replace(path); }
+
+    // Logout
+    document.getElementById("btnLogout").addEventListener("click", async () => {
+      try { await signOut(auth); } finally { go(ROUTES.login); }
+    });
+
+    function normalizePhone(v) {
+      const s = (v || "").trim();
+      if (!s) return "";
+      if (s.startsWith("08")) return "+62" + s.slice(1);
+      return s;
+    }
+
+    async function loadProfile(uid) {
+      const snap = await getDoc(doc(db, "users", uid));
+      if (!snap.exists()) return null;
+      return snap.data();
+    }
+
+    function fillForm(u) {
+      nameText.textContent = u.name || "Warga";
+      emailText.textContent = u.email || (currentUser?.email || "-");
+      uidText.textContent = "UID: " + (u.uid || currentUser?.uid || "-");
+
+      roleChip.textContent = prettyRole(u.role || "warga");
+      statusChip.textContent = (u.status || "active").toUpperCase();
+      pendingBox.classList.toggle("hidden", (u.status || "active") !== "pending_verification");
+
+      subText.textContent = u.neighborhoodId ? `Lingkungan: ${u.neighborhoodId}` : "Lingkungan: belum diatur";
+
+      document.getElementById("name").value = u.name || "";
+      document.getElementById("phone").value = u.phone || "";
+      document.getElementById("rt").value = u.address?.rt || "";
+      document.getElementById("rw").value = u.address?.rw || "";
+      document.getElementById("addressDetail").value = u.address?.detail || "";
+      document.getElementById("neighborhoodId").value = u.neighborhoodId || "";
+    }
+
+    // Save profile
+    btnSave.addEventListener("click", async () => {
+      hideAlert();
+      if (!currentUser || !currentProfile) return;
+
+      const name = document.getElementById("name").value.trim();
+      const phone = normalizePhone(document.getElementById("phone").value);
+      const rt = document.getElementById("rt").value.trim();
+      const rw = document.getElementById("rw").value.trim();
+      const addressDetail = document.getElementById("addressDetail").value.trim();
+      const neighborhoodId = document.getElementById("neighborhoodId").value.trim() || null;
+
+      if (!name) return showAlert("Nama wajib diisi.");
+
+      try {
+        setSaving(true);
+
+        await setDoc(doc(db, "users", currentUser.uid), {
+          uid: currentUser.uid,
+          name,
+          phone: phone || "",
+          neighborhoodId,
+          address: {
+            rt: rt || "",
+            rw: rw || "",
+            detail: addressDetail || ""
+          },
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+
+        currentProfile = await loadProfile(currentUser.uid);
+        fillForm(currentProfile);
+
+        setSaving(false);
+        showAlert("Tersimpan ✓");
+        setTimeout(() => hideAlert(), 900);
+      } catch (e) {
+        console.error(e);
+        setSaving(false);
+        showAlert("Gagal menyimpan. Cek Rules Firestore.");
+      }
+    });
+
+    // Request role
+    btnRequest.addEventListener("click", async () => {
+      hideReqAlert();
+      if (!currentUser || !currentProfile) return;
+
+      const requestedRole = document.getElementById("requestedRole").value;
+      const note = document.getElementById("requestNote").value.trim();
+
+      if (!requestedRole) return showReqAlert("Pilih role yang ingin diajukan.");
+
+      const neighborhoodId = (document.getElementById("neighborhoodId").value.trim() || currentProfile.neighborhoodId || null);
+      if (!neighborhoodId) return showReqAlert("Kode lingkungan belum diisi. Isi dulu di Data Profil.");
+
+      try {
+        setRequesting(true);
+
+        await addDoc(collection(db, "role_requests"), {
+          neighborhoodId,
+          uid: currentUser.uid,
+          requestedRole,
+          note: note || "",
+          status: "pending",
+          reviewedBy: null,
+          reviewedAt: null,
+          createdAt: serverTimestamp()
+        });
+
+        // set status pending_verification agar konsisten
+        await updateDoc(doc(db, "users", currentUser.uid), {
+          status: "pending_verification",
+          updatedAt: serverTimestamp()
+        });
+
+        currentProfile = await loadProfile(currentUser.uid);
+        fillForm(currentProfile);
+
+        setRequesting(false);
+        showReqAlert("Pengajuan terkirim ✓ Menunggu verifikasi admin.");
+      } catch (e) {
+        console.error(e);
+        setRequesting(false);
+        showReqAlert("Gagal mengajukan. Cek Rules Firestore.");
+      }
+    });
+
+    // Guard
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { go(ROUTES.login); return; }
+      currentUser = user;
+
+      const profile = await loadProfile(user.uid);
+      if (!profile) { go(ROUTES.register); return; }
+
+      currentProfile = profile;
+      fillForm(profile);
+    });
+  </script>
+</body>
+</html>
