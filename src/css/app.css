@@ -1,0 +1,324 @@
+/* =========================
+   GUYUB - app.css (global)
+   ========================= */
+
+/* Base */
+:root{
+  --bg: #020617;          /* slate-950 */
+  --card: rgba(255,255,255,.06);
+  --card-2: rgba(255,255,255,.08);
+  --border: rgba(255,255,255,.10);
+  --text: rgba(255,255,255,.92);
+  --muted: rgba(255,255,255,.70);
+  --muted2: rgba(255,255,255,.55);
+  --shadow: 0 20px 50px rgba(0,0,0,.45);
+  --ring: rgba(255,255,255,.16);
+}
+
+*{ box-sizing: border-box; }
+html, body{ height: 100%; }
+body{
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Optional: if you keep using Plus Jakarta Sans in HTML */
+body, button, input, select, textarea{
+  font-family: "Plus Jakarta Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+a{ color: inherit; text-decoration: none; }
+img{ max-width: 100%; display: block; }
+
+/* =========================
+   Scrollbar (webkit)
+   ========================= */
+::-webkit-scrollbar{ width: 10px; height: 10px; }
+::-webkit-scrollbar-track{ background: rgba(255,255,255,.03); }
+::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,.10);
+  border-radius: 999px;
+  border: 2px solid rgba(0,0,0,0);
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover{ background: rgba(255,255,255,.16); }
+
+/* =========================
+   Helpers
+   ========================= */
+.safe-pad{
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+}
+.no-tap-highlight{
+  -webkit-tap-highlight-color: transparent;
+}
+.text-muted{ color: var(--muted); }
+.text-muted2{ color: var(--muted2); }
+.border-soft{ border: 1px solid var(--border); }
+
+.hidden{ display: none !important; }
+
+/* =========================
+   Glass / Cards
+   ========================= */
+.glass{
+  background: var(--card);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+}
+.glass-strong{
+  background: var(--card-2);
+  border: 1px solid rgba(255,255,255,.14);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border-radius: 26px;
+  box-shadow: var(--shadow);
+}
+.panel{
+  background: rgba(2, 6, 23, .45);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+
+/* =========================
+   Inputs
+   ========================= */
+.input,
+select.input,
+textarea.input{
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(2, 6, 23, .35);
+  border: 1px solid rgba(255,255,255,.10);
+  color: var(--text);
+  outline: none;
+}
+.input::placeholder{ color: rgba(255,255,255,.45); }
+.input:focus{
+  border-color: rgba(255,255,255,.22);
+  box-shadow: 0 0 0 4px rgba(255,255,255,.06);
+}
+textarea.input{ min-height: 96px; resize: vertical; }
+
+/* Disable number spinners (mobile friendly) */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button{
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"]{ -moz-appearance: textfield; }
+
+/* =========================
+   Buttons
+   ========================= */
+.btn{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  font-weight: 800;
+  font-size: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.05);
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  transition: transform .08s ease, background .2s ease, border-color .2s ease, opacity .2s ease;
+}
+.btn:hover{ background: rgba(255,255,255,.10); }
+.btn:active{ transform: scale(.98); }
+.btn:disabled{ opacity: .55; cursor: not-allowed; }
+
+.btn-primary{
+  background: #ffffff;
+  color: #0b1220;
+  border-color: rgba(255,255,255,.25);
+}
+.btn-primary:hover{ background: rgba(255,255,255,.92); }
+
+.btn-danger{
+  background: rgba(244, 63, 94, .18);
+  color: rgba(255,255,255,.95);
+  border-color: rgba(244, 63, 94, .25);
+}
+.btn-danger:hover{ background: rgba(244, 63, 94, .24); }
+
+.btn-ghost{
+  background: transparent;
+  border-color: rgba(255,255,255,.12);
+}
+.btn-ghost:hover{ background: rgba(255,255,255,.06); }
+
+/* Small buttons */
+.btn-sm{
+  padding: 9px 12px;
+  font-size: 12px;
+  border-radius: 16px;
+}
+
+/* =========================
+   Badges / Pills
+   ========================= */
+.pill{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.08);
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(255,255,255,.92);
+}
+.pill-success{
+  background: rgba(16, 185, 129, .16);
+  border-color: rgba(16, 185, 129, .20);
+}
+.pill-warn{
+  background: rgba(245, 158, 11, .16);
+  border-color: rgba(245, 158, 11, .20);
+}
+.pill-danger{
+  background: rgba(244, 63, 94, .16);
+  border-color: rgba(244, 63, 94, .22);
+}
+
+/* =========================
+   Header sticky blur
+   ========================= */
+.app-header{
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(2, 6, 23, .60);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255,255,255,.10);
+}
+
+/* =========================
+   Bottom Nav (optional)
+   ========================= */
+.bottom-nav{
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 30;
+  padding: 10px 14px calc(env(safe-area-inset-bottom, 0px) + 10px);
+  background: rgba(2, 6, 23, .65);
+  border-top: 1px solid rgba(255,255,255,.10);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.bottom-nav .nav-item{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 18px;
+  color: rgba(255,255,255,.70);
+  transition: background .2s ease, color .2s ease, transform .08s ease;
+}
+.bottom-nav .nav-item:hover{ background: rgba(255,255,255,.06); }
+.bottom-nav .nav-item:active{ transform: scale(.98); }
+.bottom-nav .nav-item.active{
+  background: rgba(255,255,255,.10);
+  color: rgba(255,255,255,.95);
+}
+
+/* =========================
+   Animations
+   ========================= */
+@keyframes fadeUp {
+  from{ opacity: 0; transform: translateY(10px); }
+  to{ opacity: 1; transform: translateY(0); }
+}
+.fade-up{ animation: fadeUp .35s ease both; }
+
+@keyframes floatSoft {
+  0%,100%{ transform: translateY(0); }
+  50%{ transform: translateY(-6px); }
+}
+.float-soft{ animation: floatSoft 6s ease-in-out infinite; }
+
+@keyframes glowPulse{
+  0%,100%{ box-shadow: 0 0 0 rgba(255,255,255,0); }
+  50%{ box-shadow: 0 0 30px rgba(255,255,255,.08); }
+}
+.glow-pulse{ animation: glowPulse 3.2s ease-in-out infinite; }
+
+/* =========================
+   Modal (optional)
+   ========================= */
+.modal{
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: end center;
+}
+.modal-backdrop{
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.62);
+}
+.modal-sheet{
+  position: relative;
+  width: min(520px, 100%);
+  margin: 0 auto;
+  padding: 16px;
+}
+.modal-card{
+  border-radius: 26px;
+  background: rgba(2, 6, 23, .78);
+  border: 1px solid rgba(255,255,255,.12);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: var(--shadow);
+}
+
+/* =========================
+   Toast (optional)
+   ========================= */
+.toast{
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 86px);
+  transform: translateX(-50%);
+  z-index: 60;
+  width: min(520px, calc(100% - 24px));
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(2, 6, 23, .75);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  color: rgba(255,255,255,.92);
+}
+.toast.success{ border-color: rgba(16, 185, 129, .25); }
+.toast.danger{ border-color: rgba(244, 63, 94, .25); }
+
+/* =========================
+   Print helpers (surat)
+   ========================= */
+@media print {
+  .no-print{ display: none !important; }
+  .print-card{
+    background: white !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+}
