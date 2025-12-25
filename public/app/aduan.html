@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="id" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Aduan | GUYUB</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: "Plus Jakarta Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  </style>
+</head>
+
+<body class="h-full bg-slate-950 text-slate-100 overflow-y-auto">
+  <!-- Background -->
+  <div class="fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-950 to-emerald-950/35"></div>
+    <div class="absolute -top-32 -right-24 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl"></div>
+    <div class="absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-sky-500/10 blur-3xl"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-20 border-b border-white/10 bg-slate-950/60 backdrop-blur-xl">
+    <div class="mx-auto max-w-md px-5 py-4 flex items-center justify-between gap-3">
+      <div>
+        <div class="text-sm font-extrabold tracking-tight">Aduan</div>
+        <div id="subText" class="text-[11px] text-slate-300/80">Memuat…</div>
+      </div>
+      <button id="btnNew" class="rounded-2xl bg-white px-4 py-2 text-xs font-extrabold text-slate-950">
+        Buat Aduan
+      </button>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-md px-5 pb-28 pt-5 space-y-5">
+    <!-- Filter -->
+    <section class="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-4">
+      <div class="flex items-center justify-between">
+        <div class="text-xs font-bold text-slate-300/80">Filter</div>
+        <button id="btnRefresh" class="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-extrabold hover:bg-white/10">↻</button>
+      </div>
+
+      <div class="mt-3 grid grid-cols-4 gap-2 text-[11px]">
+        <button class="fBtn rounded-2xl bg-white/10 px-2 py-3 font-extrabold" data-status="all">Semua</button>
+        <button class="fBtn rounded-2xl px-2 py-3 text-slate-300/80 hover:bg-white/5" data-status="received">Diterima</button>
+        <button class="fBtn rounded-2xl px-2 py-3 text-slate-300/80 hover:bg-white/5" data-status="in_progress">Proses</button>
+        <button class="fBtn rounded-2xl px-2 py-3 text-slate-300/80 hover:bg-white/5" data-status="done">Selesai</button>
+      </div>
+
+      <input id="searchInput" type="text" placeholder="Cari aduan…"
+        class="mt-3 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20" />
+
+      <div id="scopeInfo" class="mt-3 text-[11px] text-slate-400">
+        Menampilkan aduan milik kamu.
+      </div>
+    </section>
+
+    <!-- List -->
+    <section>
+      <div id="list" class="space-y-3"></div>
+      <div id="empty" class="hidden mt-6 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 text-center">
+        <div class="text-sm font-extrabold">Belum ada aduan</div>
+        <div class="mt-1 text-xs text-slate-300/80">Klik “Buat Aduan” untuk membuat laporan.</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal New -->
+  <div id="modalNew" class="hidden fixed inset-0 z-40">
+    <div class="absolute inset-0 bg-black/60"></div>
+    <div class="absolute inset-x-0 bottom-0 mx-auto max-w-md px-5 pb-5">
+      <div class="rounded-3xl border border-white/10 bg-slate-950/80 backdrop-blur-xl p-5">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class="text-[11px] text-slate-300/80">Form aduan</div>
+            <div class="mt-1 text-lg font-extrabold">Buat Aduan</div>
+            <div class="mt-2 text-[11px] text-slate-400">Isi detail sejelas mungkin agar cepat ditangani.</div>
+          </div>
+          <button id="btnCloseNew" class="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-extrabold hover:bg-white/10">
+            Tutup
+          </button>
+        </div>
+
+        <form id="newForm" class="mt-4 space-y-3">
+          <div>
+            <label class="text-xs font-semibold text-slate-300">Kategori</label>
+            <select id="category"
+              class="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20">
+              <option value="kebersihan">Kebersihan</option>
+              <option value="keamanan">Keamanan</option>
+              <option value="fasilitas">Fasilitas</option>
+              <option value="lainnya">Lainnya</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-xs font-semibold text-slate-300">Judul</label>
+            <input id="title" type="text" required
+              class="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20"
+              placeholder="contoh: Lampu jalan mati" />
+          </div>
+
+          <div>
+            <label class="text-xs font-semibold text-slate-300">Detail</label>
+            <textarea id="detail" rows="4" required
+              class="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20"
+              placeholder="Jelaskan lokasi, kondisi, dan sejak kapan…"></textarea>
+          </div>
+
+          <div>
+            <label class="text-xs font-semibold text-slate-300">Lokasi (teks)</label>
+            <input id="locationText" type="text"
+              class="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20"
+              placeholder="contoh: depan pos ronda / gang A" />
+          </div>
+
+          <div>
+            <label class="text-xs font-semibold text-slate-300">Foto (URL) (opsional)</label>
+            <input id="photoUrl" type="url"
+              class="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20"
+              placeholder="https://..." />
+          </div>
+
+          <button id="btnSubmitNew"
+            class="w-full rounded-2xl bg-white px-4 py-3 text-sm font-extrabold text-slate-950 disabled:opacity-60">
+            Kirim Aduan
+          </button>
+
+          <div id="newAlert" class="hidden rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-slate-200"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Detail -->
+  <div id="modalDetail" class="hidden fixed inset-0 z-40">
+    <div class="absolute inset-0 bg-black/60"></div>
+    <div class="absolute inset-x-0 bottom-0 mx-auto max-w-md px-5 pb-5">
+      <div class="rounded-3xl border border-white/10 bg-slate-950/80 backdrop-blur-xl p-5">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div id="dCat" class="text-[11px] text-slate-300/80">—</div>
+            <div id="dTitle" class="mt-1 text-lg font-extrabold">—</div>
+            <div id="dMeta" class="mt-2 text-xs text-slate-300/80">—</div>
+          </div>
+          <button id="btnCloseDetail" class="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-extrabold hover:bg-white/10">
+            Tutup
+          </button>
+        </div>
+
+        <div class="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div class="text-xs font-bold text-slate-200">Detail</div>
+          <div id="dDetail" class="mt-2 text-sm text-slate-200/90 whitespace-pre-wrap">—</div>
+          <div id="dLoc" class="mt-3 text-xs text-slate-300/80">📍 —</div>
+          <a id="dPhoto" class="hidden mt-3 inline-block text-xs font-bold text-white/90 hover:underline" target="_blank" rel="noreferrer">Lihat Foto</a>
+        </div>
+
+        <div class="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div class="flex items-center justify-between">
+            <div class="text-xs font-bold text-slate-200">Timeline</div>
+            <button id="btnReloadUpdates" class="rounded-2xl border border-white/10 bg-slate-950/30 px-3 py-1 text-[11px] font-extrabold hover:bg-white/10">
+              ↻
+            </button>
+          </div>
+          <div id="updates" class="mt-3 space-y-2"></div>
+        </div>
+
+        <!-- Admin RT actions -->
+        <div id="adminBox" class="hidden mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div class="text-xs font-bold text-slate-200">Aksi Pengurus</div>
+          <div class="mt-3 grid grid-cols-2 gap-2">
+            <button class="btnSetStatus rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-sm font-extrabold hover:bg-white/10" data-status="received">
+              Diterima
+            </button>
+            <button class="btnSetStatus rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-sm font-extrabold hover:bg-white/10" data-status="in_progress">
+              Diproses
+            </button>
+            <button class="btnSetStatus rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-sm font-extrabold hover:bg-white/10" data-status="done">
+              Selesai
+            </button>
+            <button class="btnSetStatus rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-sm font-extrabold hover:bg-white/10" data-status="rejected">
+              Ditolak
+            </button>
+          </div>
+
+          <input id="adminNote" type="text"
+            class="mt-3 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20"
+            placeholder="Catatan update (opsional)" />
+
+          <div id="adminAlert" class="hidden mt-3 rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-xs text-slate-200"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <nav class="fixed bottom-0 left-0 right-0 z-30">
+    <div class="mx-auto max-w-md px-5 pb-5">
+      <div class="rounded-3xl border border-white/10 bg-slate-950/60 backdrop-blur-xl p-2">
+        <div class="grid grid-cols-5 gap-2 text-[11px]">
+          <a class="rounded-2xl px-2 py-3 text-center text-slate-300/80 hover:bg-white/5" href="/app/home.html">Home</a>
+          <a class="rounded-2xl px-2 py-3 text-center text-slate-300/80 hover:bg-white/5" href="/app/agenda.html">Agenda</a>
+          <a class="rounded-2xl px-2 py-3 text-center text-slate-300/80 hover:bg-white/5" href="/app/kas.html">Kas</a>
+          <a class="rounded-2xl bg-white/10 px-2 py-3 text-center font-extrabold" href="/app/aduan.html">Aduan</a>
+          <a class="rounded-2xl px-2 py-3 text-center text-slate-300/80 hover:bg-white/5" href="/app/profil.html">Profil</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <script>
+    const subText = document.getElementById("subText");
+    const listEl = document.getElementById("list");
+    const emptyEl = document.getElementById("empty");
+    const searchInput = document.getElementById("searchInput");
+    const scopeInfo = document.getElementById("scopeInfo");
+
+    const modalNew = document.getElementById("modalNew");
+    const btnNew = document.getElementById("btnNew");
+    const btnCloseNew = document.getElementById("btnCloseNew");
+    const btnSubmitNew = document.getElementById("btnSubmitNew");
+    const newAlert = document.getElementById("newAlert");
+
+    const modalDetail = document.getElementById("modalDetail");
+    const btnCloseDetail = document.getElementById("btnCloseDetail");
+    const btnReloadUpdates = document.getElementById("btnReloadUpdates");
+    const updatesEl = document.getElementById("updates");
+
+    const dCat = document.getElementById("dCat");
+    const dTitle = document.getElementById("dTitle");
+    const dMeta = document.getElementById("dMeta");
+    const dDetail = document.getElementById("dDetail");
+    const dLoc = document.getElementById("dLoc");
+    const dPhoto = document.getElementById("dPhoto");
+
+    const adminBox = document.getElementById("adminBox");
+    const adminNote = document.getElementById("adminNote");
+    const adminAlert = document.getElementById("adminAlert");
+
+    let currentUser = null;
+    let currentProfile = null;
+    let allComplaints = [];
+    let statusFilter = "all";
+    let selectedComplaint = null;
+
+    function fmtDate(ts) {
+      try {
+        const d = ts?.toDate ? ts.toDate() : new Date(ts);
+        return d.toLocaleString("id-ID", { year:"numeric", month:"short", day:"2-digit", hour:"2-digit", minute:"2-digit" });
+      } catch { return "—"; }
+    }
+    function fmtStatus(s) {
+      const map = {
+        received: "DITERIMA",
+        in_progress: "DIPROSES",
+        done: "SELESAI",
+        rejected: "DITOLAK"
+      };
+      return map[s] || (s || "received").toUpperCase();
+    }
+    function escapeHtml(s="") {
+      return s.replace(/[&<>"']/g, (c)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+    }
+    function show(el){ el.classList.remove("hidden"); }
+    function hide(el){ el.classList.add("hidden"); }
+
+    function setFilterActive(st) {
+      document.querySelectorAll(".fBtn").forEach(btn => {
+        const a = btn.dataset.status === st;
+        btn.className = "fBtn rounded-2xl px-2 py-3 text-[11px] " + (a ? "bg-white/10 font-extrabold" : "text-slate-300/80 hover:bg-white/5");
+      });
+    }
+
+    function renderList(items) {
+      listEl.innerHTML = "";
+      emptyEl.classList.toggle("hidden", items.length !== 0);
+
+      items.forEach(c => {
+        const chip = `
+          <span class="inline-flex items-center rounded-full border border-white/10 bg-slate-950/30 px-3 py-1 text-[11px] font-bold">
+            ${fmtStatus(c.status)}
+          </span>
+        `;
+
+        const html = `
+          <article class="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-5">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="text-[11px] text-slate-300/80">${escapeHtml(c.category || "-")}</div>
+                <div class="mt-1 text-base font-extrabold tracking-tight">${escapeHtml(c.title || "Aduan")}</div>
+                <div class="mt-2 text-xs text-slate-300/80">🕒 ${fmtDate(c.createdAt)}</div>
+                <div class="mt-1 text-xs text-slate-300/80">📍 ${escapeHtml(c.location?.text || "-")}</div>
+              </div>
+              <div class="text-right">
+                <div>${chip}</div>
+                <button data-id="${c.id}" class="btnDetail mt-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-extrabold hover:bg-white/10">
+                  Detail
+                </button>
+              </div>
+            </div>
+            <div class="mt-3 text-sm text-slate-200/90 line-clamp-2">${escapeHtml(c.detail || "—")}</div>
+          </article>
+        `;
+        listEl.insertAdjacentHTML("beforeend", html);
+      });
+
+      document.querySelectorAll(".btnDetail").forEach(btn => {
+        btn.addEventListener("click", () => openDetail(btn.dataset.id));
+      });
+
+      subText.textContent = `${items.length} aduan ditampilkan`;
+    }
+
+    function applyFilterAndRender() {
+      const q = searchInput.value.trim().toLowerCase();
+      const items = allComplaints
+        .filter(c => statusFilter === "all" ? true : (c.status || "received") === statusFilter)
+        .filter(c => {
+          if (!q) return true;
+          return (c.title || "").toLowerCase().includes(q) ||
+                 (c.detail || "").toLowerCase().includes(q) ||
+                 (c.location?.text || "").toLowerCase().includes(q);
+        });
+
+      renderList(items);
+    }
+
+    function openNew() { show(modalNew); hide(newAlert); newAlert.textContent=""; }
+    function closeNew() { hide(modalNew); }
+
+    btnNew.addEventListener("click", openNew);
+    btnCloseNew.addEventListener("click", closeNew);
+    modalNew.addEventListener("click", (e) => { if (e.target === modalNew) closeNew(); });
+
+    function openDetail(id) {
+      const c = allComplaints.find(x => x.id === id);
+      if (!c) return;
+      selectedComplaint = c;
+
+      dCat.textContent = (c.category || "-").toUpperCase();
+      dTitle.textContent = c.title || "Aduan";
+      dMeta.textContent = `${fmtStatus(c.status)} • ${fmtDate(c.createdAt)}`;
+      dDetail.textContent = c.detail || "—";
+      dLoc.textContent = `📍 ${c.location?.text || "-"}`;
+
+      if (c.photoUrl) {
+        dPhoto.href = c.photoUrl;
+        dPhoto.textContent = "Lihat Foto";
+        show(dPhoto);
+      } else {
+        hide(dPhoto);
+      }
+
+      // admin box show only for RT admins or super_admin
+      const role = currentProfile?.role || "warga";
+      const isRtAdmin = role.startsWith("rt_") || role === "super_admin";
+      adminBox.classList.toggle("hidden", !isRtAdmin);
+      adminAlert.classList.add("hidden");
+      adminAlert.textContent = "";
+      adminNote.value = "";
+
+      show(modalDetail);
+      window.__loadUpdates && window.__loadUpdates(c.id);
+    }
+
+    function closeDetail() {
+      hide(modalDetail);
+      selectedComplaint = null;
+      updatesEl.innerHTML = "";
+    }
+
+    btnCloseDetail.addEventListener("click", closeDetail);
+    modalDetail.addEventListener("click", (e) => { if (e.target === modalDetail) closeDetail(); });
+    btnReloadUpdates.addEventListener("click", () => selectedComplaint && window.__loadUpdates && window.__loadUpdates(selectedComplaint.id));
+
+    document.getElementById("btnRefresh").addEventListener("click", () => window.__reloadComplaints && window.__reloadComplaints());
+    searchInput.addEventListener("input", applyFilterAndRender);
+
+    document.querySelectorAll(".fBtn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        statusFilter = btn.dataset.status;
+        setFilterActive(statusFilter);
+        applyFilterAndRender();
+      });
+    });
+
+    function setNewLoading(v) {
+      btnSubmitNew.disabled = v;
+      btnSubmitNew.textContent = v ? "Mengirim…" : "Kirim Aduan";
+    }
+    function showNewAlert(msg) {
+      newAlert.textContent = msg;
+      newAlert.classList.remove("hidden");
+    }
+    function showAdminAlert(msg) {
+      adminAlert.textContent = msg;
+      adminAlert.classList.remove("hidden");
+    }
+
+    // init filter
+    setFilterActive("all");
+  </script>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import {
+      getFirestore,
+      doc, getDoc,
+      collection, query, where, orderBy, limit, getDocs,
+      addDoc, setDoc, serverTimestamp,
+      updateDoc
+    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    // ✅ GANTI sesuai Firebase kamu
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    const ROUTES = {
+      login: "/login.html",
+      register: "/register.html"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    function go(path) { window.location.replace(path); }
+
+    function isRtAdmin(role) {
+      return (role || "").startsWith("rt_") || role === "super_admin";
+    }
+
+    async function loadComplaints(profile, uid) {
+      subText.textContent = "Memuat aduan…";
+
+      const neighborhoodId = profile.neighborhoodId || null;
+      if (!neighborhoodId) {
+        allComplaints = [];
+        applyFilterAndRender();
+        scopeInfo.textContent = "Kode lingkungan belum diatur (minta admin set neighborhoodId).";
+        return;
+      }
+
+      let q;
+      if (isRtAdmin(profile.role || "")) {
+        // RT admin sees all in neighborhood
+        q = query(
+          collection(db, "complaints"),
+          where("neighborhoodId", "==", neighborhoodId),
+          orderBy("createdAt", "desc"),
+          limit(50)
+        );
+        scopeInfo.textContent = "Mode pengurus RT: menampilkan semua aduan di lingkungan.";
+      } else {
+        // warga sees only theirs
+        q = query(
+          collection(db, "complaints"),
+          where("neighborhoodId", "==", neighborhoodId),
+          where("createdBy", "==", uid),
+          orderBy("createdAt", "desc"),
+          limit(50)
+        );
+        scopeInfo.textContent = "Menampilkan aduan milik kamu.";
+      }
+
+      const snap = await getDocs(q);
+      const items = [];
+      snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+
+      allComplaints = items;
+      applyFilterAndRender();
+    }
+
+    window.__reloadComplaints = async () => {
+      if (!currentUser || !currentProfile) return;
+      await loadComplaints(currentProfile, currentUser.uid);
+    };
+
+    window.__loadUpdates = async (complaintId) => {
+      updatesEl.innerHTML = `<div class="text-xs text-slate-300/80">Memuat timeline…</div>`;
+      const qs = query(
+        collection(db, "complaints", complaintId, "updates"),
+        orderBy("createdAt", "desc"),
+        limit(30)
+      );
+      const snap = await getDocs(qs);
+
+      const rows = [];
+      snap.forEach(d => rows.push(d.data()));
+
+      if (rows.length === 0) {
+        updatesEl.innerHTML = `<div class="text-xs text-slate-300/80">Belum ada update.</div>`;
+        return;
+      }
+
+      updatesEl.innerHTML = "";
+      rows.forEach(u => {
+        const html = `
+          <div class="rounded-2xl border border-white/10 bg-slate-950/30 p-3">
+            <div class="text-[11px] text-slate-300/80">${fmtDate(u.createdAt)} • <b>${fmtStatus(u.status)}</b></div>
+            <div class="mt-1 text-sm text-slate-200/90">${escapeHtml(u.note || "—")}</div>
+          </div>
+        `;
+        updatesEl.insertAdjacentHTML("beforeend", html);
+      });
+    };
+
+    // Submit new complaint
+    document.getElementById("newForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      newAlert.classList.add("hidden"); newAlert.textContent = "";
+
+      if (!currentUser || !currentProfile) return;
+
+      const neighborhoodId = currentProfile.neighborhoodId || null;
+      if (!neighborhoodId) {
+        showNewAlert("Kode lingkungan belum diatur. Isi di Profil atau minta admin set.");
+        return;
+      }
+
+      const category = document.getElementById("category").value;
+      const title = document.getElementById("title").value.trim();
+      const detail = document.getElementById("detail").value.trim();
+      const locationText = document.getElementById("locationText").value.trim();
+      const photoUrl = document.getElementById("photoUrl").value.trim();
+
+      if (!title) return showNewAlert("Judul wajib diisi.");
+      if (!detail) return showNewAlert("Detail wajib diisi.");
+
+      try {
+        setNewLoading(true);
+
+        const ref = await addDoc(collection(db, "complaints"), {
+          neighborhoodId,
+          category,
+          title,
+          detail,
+          photoUrl: photoUrl || "",
+          location: { text: locationText || "", lat: null, lng: null },
+          status: "received",
+          createdBy: currentUser.uid,
+          createdAt: serverTimestamp(),
+          handledBy: null
+        });
+
+        // initial update
+        await addDoc(collection(db, "complaints", ref.id, "updates"), {
+          status: "received",
+          note: "Aduan dibuat oleh warga.",
+          photoUrl: "",
+          createdBy: currentUser.uid,
+          createdAt: serverTimestamp()
+        });
+
+        setNewLoading(false);
+        showNewAlert("Aduan terkirim ✓");
+
+        // reset form
+        document.getElementById("title").value = "";
+        document.getElementById("detail").value = "";
+        document.getElementById("locationText").value = "";
+        document.getElementById("photoUrl").value = "";
+
+        await loadComplaints(currentProfile, currentUser.uid);
+
+        setTimeout(() => closeNew(), 800);
+      } catch (err) {
+        console.error(err);
+        setNewLoading(false);
+        showNewAlert("Gagal mengirim aduan. Cek Rules Firestore.");
+      }
+    });
+
+    // Admin set status buttons
+    document.querySelectorAll(".btnSetStatus").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        if (!selectedComplaint || !currentUser || !currentProfile) return;
+
+        const role = currentProfile.role || "warga";
+        if (!isRtAdmin(role)) {
+          showAdminAlert("Akses ditolak (hanya pengurus RT).");
+          return;
+        }
+
+        const status = btn.dataset.status;
+        const note = document.getElementById("adminNote").value.trim();
+
+        try {
+          showAdminAlert("Menyimpan…");
+
+          // update main doc
+          await updateDoc(doc(db, "complaints", selectedComplaint.id), {
+            status,
+            handledBy: currentUser.uid
+          });
+
+          // add update timeline
+          await addDoc(collection(db, "complaints", selectedComplaint.id, "updates"), {
+            status,
+            note: note || `Status diubah menjadi ${fmtStatus(status)}.`,
+            photoUrl: "",
+            createdBy: currentUser.uid,
+            createdAt: serverTimestamp()
+          });
+
+          // refresh local list
+          await loadComplaints(currentProfile, currentUser.uid);
+
+          // refresh modal content
+          const updated = allComplaints.find(x => x.id === selectedComplaint.id);
+          if (updated) {
+            selectedComplaint = updated;
+            dMeta.textContent = `${fmtStatus(updated.status)} • ${fmtDate(updated.createdAt)}`;
+          }
+
+          await window.__loadUpdates(selectedComplaint.id);
+          showAdminAlert("Tersimpan ✓");
+          setTimeout(() => { adminAlert.classList.add("hidden"); }, 900);
+        } catch (e) {
+          console.error(e);
+          showAdminAlert("Gagal update. Cek Rules Firestore.");
+        }
+      });
+    });
+
+    // Guard
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { go(ROUTES.login); return; }
+      currentUser = user;
+
+      const usnap = await getDoc(doc(db, "users", user.uid));
+      if (!usnap.exists()) { go(ROUTES.register); return; }
+      currentProfile = usnap.data();
+
+      const neigh = currentProfile.neighborhoodId || null;
+      subText.textContent = neigh ? `Lingkungan: ${neigh}` : "Kode lingkungan belum diatur";
+
+      await loadComplaints(currentProfile, user.uid);
+    });
+  </script>
+</body>
+</html>
