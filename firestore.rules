@@ -1,0 +1,131 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* =========================
+       Helper Functions
+       ========================= */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(uid()));
+    }
+
+    function role() {
+      return userDoc().data.role;
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && role() == "super_admin";
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        (role() == "super_admin"
+        || role() == "rt_admin"
+        || role() == "pkk_admin"
+        || role() == "kt_admin");
+    }
+
+    function sameNeighborhood(data) {
+      return data.neighborhoodId == userDoc().data.neighborhoodId;
+    }
+
+    /* =========================
+       USERS
+       ========================= */
+    match /users/{userId} {
+
+      // User boleh baca profil sendiri
+      allow read: if isSignedIn() && uid() == userId;
+
+      // User boleh create profil SENDIRI SAJA (register)
+      allow create: if isSignedIn()
+        && uid() == userId
+        // tidak boleh set role selain warga saat create
+        && request.resource.data.role in ["warga", "super_admin"];
+
+      // Update:
+      // - User boleh update data diri (nama, phone)
+      // - TAPI role hanya boleh diubah oleh super_admin
+      allow update: if isSignedIn()
+        && (
+          // update diri sendiri TANPA ubah role
+          (uid() == userId
+            && request.resource.data.role == resource.data.role)
+
+          // atau super admin bebas update
+          || isSuperAdmin()
+        );
+
+      // Hapus user (super admin only)
+      allow delete: if isSuperAdmin();
+    }
+
+    /* =========================
+       ANNOUNCEMENTS
+       ========================= */
+    match /announcements/{id} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin() && sameNeighborhood(resource.data);
+    }
+
+    /* =========================
+       EVENTS
+       ========================= */
+    match /events/{id} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin() && sameNeighborhood(resource.data);
+    }
+
+    /* =========================
+       FINANCE (KAS)
+       ========================= */
+    match /finance_transactions/{id} {
+      allow read: if isSignedIn() && sameNeighborhood(resource.data);
+      allow create: if isSignedIn() && sameNeighborhood(request.resource.data);
+      allow update, delete: if isAdmin() && sameNeighborhood(resource.data);
+    }
+
+    /* =========================
+       INVENTORY
+       ========================= */
+    match /inventory_items/{id} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin() && sameNeighborhood(resource.data);
+    }
+
+    match /inventory_loans/{id} {
+      allow read: if isSignedIn() && sameNeighborhood(resource.data);
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin() && sameNeighborhood(resource.data);
+    }
+
+    /* =========================
+       COMPLAINTS
+       ========================= */
+    match /complaints/{id} {
+      allow read: if isSignedIn() && sameNeighborhood(resource.data);
+      allow create: if isSignedIn();
+      allow update:
+        if isAdmin() && sameNeighborhood(resource.data)
+        || (isSignedIn()
+            && uid() == resource.data.createdBy
+            && resource.data.status == "open");
+      allow delete: if isSuperAdmin();
+    }
+
+    /* =========================
+       DEFAULT DENY
+       ========================= */
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
