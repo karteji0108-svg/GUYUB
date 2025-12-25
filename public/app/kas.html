@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="id" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Kas | GUYUB</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: "Plus Jakarta Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  </style>
+</head>
+
+<body class="h-full bg-slate-950 text-slate-100 overflow-y-auto">
+  <!-- Background -->
+  <div class="fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-950 to-emerald-950/35"></div>
+    <div class="absolute -top-32 -right-24 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl"></div>
+    <div class="absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-sky-500/10 blur-3xl"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-20 border-b border-white/10 bg-slate-950/60 backdrop-blur-xl">
+    <div class="mx-auto max-w-md px-5 py-4 flex items-center justify-between gap-3">
+      <div>
+        <div class="text-sm font-extrabold tracking-tight">Kas</div>
+        <div id="subText" class="text-[11px] text-slate-300/80">Memuat…</div>
+      </div>
+      <a href="/app/home.html" class="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-extrabold hover:bg-white/10">
+        Home
+      </a>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-md px-5 pb-28 pt-5">
+    <!-- Tabs Org -->
+    <section class="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-4">
+      <div class="text-xs font-bold text-slate-300/80">Pilih kas organisasi</div>
+      <div class="mt-3 grid grid-cols-3 gap-2 text-[11px]">
+        <button class="tabBtn rounded-2xl bg-white/10 px-2 py-3 font-extrabold" data-org="rt">Kas RT</button>
+        <button class="tabBtn rounded-2xl px-2 py-3 text-slate-300/80 hover:bg-white/5" data-org="pkk">Kas PKK</button>
+        <button class="tabBtn rounded-2xl px-2 py-3 text-slate-300/80 hover:bg-white/5" data-org="kt">Kas KT</button>
+      </div>
+
+      <!-- Summary -->
+      <div class="mt-4 rounded-3xl border border-white/10 bg-slate-950/30 p-5">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div id="orgTitle" class="text-xs text-slate-300/80">Kas RT</div>
+            <div id="balanceText" class="mt-1 text-2xl font-extrabold tracking-tight">Rp 0</div>
+            <div id="updatedText" class="mt-2 text-[11px] text-slate-400">Terakhir update: —</div>
+          </div>
+          <div class="text-right">
+            <div class="text-[11px] text-slate-400">Bulan ini</div>
+            <div class="mt-1 text-[11px] font-bold text-slate-200">Masuk: <span id="inMonth">Rp 0</span></div>
+            <div class="mt-1 text-[11px] font-bold text-slate-200">Keluar: <span id="outMonth">Rp 0</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-center gap-2">
+        <button id="btnPay"
+          class="flex-1 rounded-2xl bg-white px-4 py-3 text-sm font-extrabold text-slate-950">
+          Bayar Iuran / Donasi
+        </button>
+        <button id="btnRefresh"
+          class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-extrabold hover:bg-white/10">
+          ↻
+        </button>
+      </div>
+
+      <div class="mt-3 text-[11px] text-slate-400">
+        Pembayaran dari warga akan masuk sebagai <b>pending</b> dan diverifikasi bendahara.
+      </div>
+    </section>
+
+    <!-- Recent transactions -->
+    <section class="mt-5 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-5">
+      <div class="flex items-center justify-between">
+        <div class="text-sm font-extrabold">Transaksi Terbaru</div>
+        <span class="text-[11px] text-slate-400">max 15</span>
+      </div>
+      <div id="txList" class="mt-4 space-y-3"></div>
+      <div id="txEmpty" class="hidden mt-4 text-center text-xs text-slate-300/80">
+        Belum ada transaksi.
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal Pay -->
+  <div id="modal" class="hidden fixed inset-0 z-40">
+    <div class="absolute inset-0 bg-black/60"></div>
+    <div class="absolute inset-x-0 bottom-0 mx-auto max-w-md px-5 pb-5">
+      <div class="rounded-3xl border border-white/10 bg-slate-950/80 backdrop-blur-xl p-5">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class="text-[11px] text-slate-300/80">Form pembayaran</div>
+            <div class="mt-1 text-lg font-extrabold">Bayar ke <span id="mOrg">Kas RT</span></div>
+            <div class="mt-2 text-[11px] text-slate-400">Isi nominal & bukti (jika ada) untuk diverifikasi.</div>
+          </div>
+          <button id="btnClose" class="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-extrabold hover:bg-white/10">
+            Tutup
+          </button>
+        </div>
+
+        <form id="payForm" class="mt-4 space-y-3">
+          <div>
+            <label class="text-xs font-semibold text-slate-300">Jenis</label>
+            <select id="payCategory"
+              class="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20">
+              <option value="iuran">Iuran</option>
+              <option value="donasi">Donasi</option>
+              <option value="kegiatan">Kontribusi Kegiatan</option>
+              <option value="lainnya">Lainnya</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-xs font-semibold text-slate-300">Nominal (Rp)</label>
+            <input id="payAmount" type="number" min="1000" step="1000" required
+              class="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20"
+              placeholder="contoh: 20000" />
+          </div>
+
+          <div>
+            <label class="text-xs font-semibold text-slate-300">Judul / Keterangan</label>
+            <input id="payTitle" type="text" required
+              class="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20"
+              placeholder="contoh: Iuran Desember - Budi" />
+          </div>
+
+          <div>
+            <label class="text-xs font-semibold text-slate-300">Bukti (URL foto) (opsional)</label>
+            <input id="payProofUrl" type="url"
+              class="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20"
+              placeholder="https://..." />
+            <div class="mt-2 text-[11px] text-slate-400">
+              Sementara pakai URL. Nanti bisa kita upgrade upload ke Firebase Storage/Cloudinary.
+            </div>
+          </div>
+
+          <button id="btnSubmit"
+            class="w-full rounded-2xl bg-white px-4 py-3 text-sm font-extrabold text-slate-950 disabled:opacity-60">
+            Kirim Pembayaran
+          </button>
+
+          <div id="mAlert" class="hidden rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-slate-200"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <nav class="fixed bottom-0 left-0 right-0 z-30">
+    <div class="mx-auto max-w-md px-5 pb-5">
+      <div class="rounded-3xl border border-white/10 bg-slate-950/60 backdrop-blur-xl p-2">
+        <div class="grid grid-cols-5 gap-2 text-[11px]">
+          <a class="rounded-2xl px-2 py-3 text-center text-slate-300/80 hover:bg-white/5" href="/app/home.html">Home</a>
+          <a class="rounded-2xl px-2 py-3 text-center text-slate-300/80 hover:bg-white/5" href="/app/agenda.html">Agenda</a>
+          <a class="rounded-2xl bg-white/10 px-2 py-3 text-center font-extrabold" href="/app/kas.html">Kas</a>
+          <a class="rounded-2xl px-2 py-3 text-center text-slate-300/80 hover:bg-white/5" href="/app/aduan.html">Aduan</a>
+          <a class="rounded-2xl px-2 py-3 text-center text-slate-300/80 hover:bg-white/5" href="/app/profil.html">Profil</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <script>
+    const subText = document.getElementById("subText");
+    const orgTitle = document.getElementById("orgTitle");
+    const balanceText = document.getElementById("balanceText");
+    const updatedText = document.getElementById("updatedText");
+    const inMonth = document.getElementById("inMonth");
+    const outMonth = document.getElementById("outMonth");
+
+    const txList = document.getElementById("txList");
+    const txEmpty = document.getElementById("txEmpty");
+
+    const modal = document.getElementById("modal");
+    const btnPay = document.getElementById("btnPay");
+    const btnClose = document.getElementById("btnClose");
+    const btnSubmit = document.getElementById("btnSubmit");
+    const mOrg = document.getElementById("mOrg");
+    const mAlert = document.getElementById("mAlert");
+
+    let currentOrg = "rt";
+    let currentUser = null;
+    let currentProfile = null;
+
+    function fmtRp(n) {
+      const v = Number(n || 0);
+      return "Rp " + v.toLocaleString("id-ID");
+    }
+    function fmtOrg(org) {
+      if (org === "rt") return "Kas RT";
+      if (org === "pkk") return "Kas PKK";
+      if (org === "kt") return "Kas Karang Taruna";
+      return "Kas";
+    }
+    function fmtDate(ts) {
+      try {
+        const d = ts?.toDate ? ts.toDate() : new Date(ts);
+        return d.toLocaleString("id-ID", { year:"numeric", month:"short", day:"2-digit", hour:"2-digit", minute:"2-digit" });
+      } catch { return "—"; }
+    }
+    function showModal() { modal.classList.remove("hidden"); }
+    function hideModal() { modal.classList.add("hidden"); mAlert.classList.add("hidden"); mAlert.textContent=""; }
+    function setTabActive(org) {
+      document.querySelectorAll(".tabBtn").forEach(btn => {
+        const a = btn.dataset.org === org;
+        btn.className =
+          "tabBtn rounded-2xl px-2 py-3 text-[11px] " +
+          (a ? "bg-white/10 font-extrabold" : "text-slate-300/80 hover:bg-white/5");
+      });
+    }
+    function setLoading(v) {
+      btnSubmit.disabled = v;
+      btnSubmit.textContent = v ? "Mengirim…" : "Kirim Pembayaran";
+    }
+    function showMAlert(msg) {
+      mAlert.textContent = msg;
+      mAlert.classList.remove("hidden");
+    }
+    function escapeHtml(s="") {
+      return s.replace(/[&<>"']/g, (c)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+    }
+
+    // Tabs
+    document.querySelectorAll(".tabBtn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        currentOrg = btn.dataset.org;
+        setTabActive(currentOrg);
+        orgTitle.textContent = fmtOrg(currentOrg);
+        mOrg.textContent = fmtOrg(currentOrg);
+        window.__reloadKas && window.__reloadKas();
+      });
+    });
+
+    // Modal events
+    btnPay.addEventListener("click", () => {
+      mOrg.textContent = fmtOrg(currentOrg);
+      showModal();
+    });
+    btnClose.addEventListener("click", hideModal);
+    modal.addEventListener("click", (e) => { if (e.target === modal) hideModal(); });
+    document.getElementById("btnRefresh").addEventListener("click", () => window.__reloadKas && window.__reloadKas());
+
+    // init default tab
+    setTabActive(currentOrg);
+    orgTitle.textContent = fmtOrg(currentOrg);
+  </script>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, collection, query, where, orderBy, limit, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    // ✅ GANTI sesuai Firebase kamu
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    const ROUTES = {
+      login: "/login.html",
+      register: "/register.html"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    function go(path) { window.location.replace(path); }
+
+    function walletDocId(neighborhoodId, org) {
+      // sesuai blueprint: NEIGH_001_rt
+      return `${neighborhoodId}_${org}`;
+    }
+
+    async function loadWallet(neighborhoodId, org) {
+      if (!neighborhoodId) {
+        // demo mode
+        balanceText.textContent = fmtRp(0);
+        updatedText.textContent = "Terakhir update: —";
+        inMonth.textContent = fmtRp(0);
+        outMonth.textContent = fmtRp(0);
+        return;
+      }
+
+      const id = walletDocId(neighborhoodId, org);
+      const snap = await getDoc(doc(db, "org_wallets", id));
+      if (!snap.exists()) {
+        balanceText.textContent = fmtRp(0);
+        updatedText.textContent = "Terakhir update: —";
+        inMonth.textContent = fmtRp(0);
+        outMonth.textContent = fmtRp(0);
+        return;
+      }
+      const w = snap.data();
+      balanceText.textContent = fmtRp(w.balance || 0);
+      updatedText.textContent = "Terakhir update: " + fmtDate(w.updatedAt);
+
+      // hitung ringkasan bulan ini dari transaksi (simple, ambil 200 terakhir bulan ini)
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const qs = query(
+        collection(db, "finance_tx"),
+        where("neighborhoodId", "==", neighborhoodId),
+        where("org", "==", org),
+        where("createdAt", ">=", monthStart),
+        orderBy("createdAt", "desc"),
+        limit(200)
+      );
+      const snapTx = await getDocs(qs);
+      let inc = 0, out = 0;
+      snapTx.forEach(d => {
+        const t = d.data();
+        if (t.approval?.status !== "approved") return; // hanya approved dihitung
+        if (t.type === "income") inc += Number(t.amount || 0);
+        if (t.type === "expense") out += Number(t.amount || 0);
+      });
+      inMonth.textContent = fmtRp(inc);
+      outMonth.textContent = fmtRp(out);
+    }
+
+    async function loadTx(neighborhoodId, org) {
+      txList.innerHTML = "";
+      txEmpty.classList.add("hidden");
+
+      if (!neighborhoodId) {
+        txEmpty.classList.remove("hidden");
+        return;
+      }
+
+      const qs = query(
+        collection(db, "finance_tx"),
+        where("neighborhoodId", "==", neighborhoodId),
+        where("org", "==", org),
+        orderBy("createdAt", "desc"),
+        limit(15)
+      );
+
+      const snap = await getDocs(qs);
+      const items = [];
+      snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+
+      if (items.length === 0) {
+        txEmpty.classList.remove("hidden");
+        return;
+      }
+
+      items.forEach(t => {
+        const status = t.approval?.status || "pending";
+        const type = t.type || "income";
+        const sign = type === "expense" ? "-" : "+";
+        const amount = fmtRp(t.amount || 0);
+
+        const chip = `
+          <span class="inline-flex items-center rounded-full border border-white/10 bg-slate-950/30 px-3 py-1 text-[11px] font-bold">
+            ${status.toUpperCase()}
+          </span>
+        `;
+
+        const html = `
+          <div class="rounded-2xl border border-white/10 bg-slate-950/30 p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="text-sm font-extrabold">${escapeHtml(t.title || "Transaksi")}</div>
+                <div class="mt-1 text-[11px] text-slate-300/80">
+                  ${escapeHtml(t.category || "-")} • ${fmtDate(t.createdAt)}
+                </div>
+                <div class="mt-1 text-[11px] text-slate-300/80">
+                  oleh: ${escapeHtml(t.createdBy || "-")}
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-extrabold">${sign} ${amount}</div>
+                <div class="mt-2">${chip}</div>
+              </div>
+            </div>
+          </div>
+        `;
+        txList.insertAdjacentHTML("beforeend", html);
+      });
+    }
+
+    async function reloadAll() {
+      if (!currentProfile) return;
+      const neigh = currentProfile.neighborhoodId || null;
+
+      subText.textContent = neigh ? `Lingkungan: ${neigh}` : "Mode demo (tanpa kode lingkungan)";
+      await loadWallet(neigh, currentOrg);
+      await loadTx(neigh, currentOrg);
+    }
+
+    window.__reloadKas = reloadAll;
+
+    // Submit pembayaran (create finance_tx pending)
+    document.getElementById("payForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      mAlert.classList.add("hidden"); mAlert.textContent = "";
+
+      if (!currentUser || !currentProfile) {
+        showMAlert("Belum login.");
+        return;
+      }
+
+      const neighborhoodId = currentProfile.neighborhoodId || null;
+      if (!neighborhoodId) {
+        showMAlert("Kode lingkungan belum diatur. Minta admin set neighborhoodId dulu.");
+        return;
+      }
+
+      const category = document.getElementById("payCategory").value;
+      const amount = Number(document.getElementById("payAmount").value || 0);
+      const title = document.getElementById("payTitle").value.trim();
+      const proofUrl = document.getElementById("payProofUrl").value.trim();
+      if (!title) return showMAlert("Judul/keterangan wajib diisi.");
+      if (!amount || amount < 1000) return showMAlert("Nominal minimal Rp 1.000.");
+
+      try {
+        setLoading(true);
+
+        await addDoc(collection(db, "finance_tx"), {
+          neighborhoodId,
+          org: currentOrg,
+          type: "income",
+          category,
+          amount,
+          title,
+          note: "Pembayaran dari warga",
+          proofUrl: proofUrl || "",
+          eventId: null,
+          createdBy: currentUser.uid,
+          createdAt: serverTimestamp(),
+          approval: {
+            status: "pending",
+            by: null,
+            at: null,
+            reason: ""
+          }
+        });
+
+        setLoading(false);
+        showMAlert("Berhasil dikirim. Menunggu verifikasi bendahara ✓");
+
+        // reset form
+        document.getElementById("payAmount").value = "";
+        document.getElementById("payTitle").value = "";
+        document.getElementById("payProofUrl").value = "";
+
+        // refresh list
+        await reloadAll();
+
+        setTimeout(() => hideModal(), 900);
+      } catch (err) {
+        console.error(err);
+        setLoading(false);
+        showMAlert("Gagal mengirim. Cek Rules Firestore atau koneksi.");
+      }
+    });
+
+    // Guard
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { go(ROUTES.login); return; }
+      currentUser = user;
+
+      const usnap = await getDoc(doc(db, "users", user.uid));
+      if (!usnap.exists()) { go(ROUTES.register); return; }
+      currentProfile = usnap.data();
+
+      await reloadAll();
+    });
+  </script>
+</body>
+</html>
