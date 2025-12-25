@@ -67,7 +67,7 @@
           </div>
 
           <button id="btnGoogle" type="button"
-            class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-slate-100 hover:bg-white/10">
+            class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-slate-100 hover:bg-white/10 disabled:opacity-60">
             Masuk dengan Google
           </button>
         </form>
@@ -106,64 +106,41 @@
     }
   </script>
 
-  <!-- Firebase (Modular v9) -->
+  <!-- App Login Logic -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    import { initFirebase, ROUTES, routeByRole } from "/assets/js/firebase.js";
+    import {
+      onAuthStateChanged,
+      signInWithEmailAndPassword,
+      GoogleAuthProvider,
+      signInWithPopup,
+      sendPasswordResetEmail
+    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-    // ✅ GANTI sesuai Firebase kamu
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_STORAGE_BUCKET",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
-
-    // ✅ Sesuaikan jika nama file berbeda
-    const ROUTES = {
-      register: "/register.html",
-      home: "/app/home.html",
-      adminRT: "/app/admin/rt.html",
-      adminPKK: "/app/admin/pkk.html",
-      adminKT: "/app/admin/kt.html",
-      superAdmin: "/app/admin/verifikasi.html"
-    };
-
-    function routeByRole(role) {
-      if (!role) return ROUTES.home;
-      if (role === "super_admin") return ROUTES.superAdmin;
-      if (role.startsWith("rt_")) return ROUTES.adminRT;
-      if (role.startsWith("pkk_")) return ROUTES.adminPKK;
-      if (role.startsWith("kt_")) return ROUTES.adminKT;
-      return ROUTES.home;
-    }
+    const { auth, db } = initFirebase();
 
     function go(path) {
       window.location.replace(path);
     }
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
     async function redirectAfterLogin(uid) {
       const usnap = await getDoc(doc(db, "users", uid));
       if (!usnap.exists()) {
-        // belum punya profil Firestore → lempar ke register untuk lengkapi
         go(ROUTES.register);
         return;
       }
+
       const u = usnap.data();
       if ((u.status || "active") === "suspended") {
         throw new Error("Akun dinonaktifkan. Hubungi pengurus.");
       }
+
+      // redirect sesuai role
       go(routeByRole(u.role || "warga"));
     }
 
-    // Jika sudah login, langsung redirect
+    // Kalau sudah login, langsung redirect
     onAuthStateChanged(auth, async (user) => {
       if (!user) return;
       try {
@@ -200,19 +177,18 @@
       }
     });
 
-    // Google login (opsional)
+    // Google login
     document.getElementById("btnGoogle").addEventListener("click", async () => {
       clearAlert();
       try {
         setLoading(true);
         const provider = new GoogleAuthProvider();
         const cred = await signInWithPopup(auth, provider);
-        // jika belum ada profil, nanti diarahkan ke register
         await redirectAfterLogin(cred.user.uid);
       } catch (err) {
         console.error(err);
         setLoading(false);
-        showAlert("Login Google gagal. Pastikan pop-up tidak diblokir.");
+        showAlert("Login Google gagal. Pastikan pop-up tidak diblokir & Google Sign-In diaktifkan di Firebase Auth.");
       }
     });
 
@@ -232,7 +208,7 @@
       } catch (err) {
         console.error(err);
         setLoading(false);
-        showAlert("Gagal kirim reset. Pastikan email benar.");
+        showAlert("Gagal kirim reset. Pastikan email benar & fitur reset aktif.");
       }
     });
   </script>
