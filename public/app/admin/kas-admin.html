@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="id" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Kas Admin | GUYUB</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style> body { font-family: "Plus Jakarta Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif; } </style>
+</head>
+
+<body class="h-full bg-slate-950 text-slate-100 overflow-y-auto">
+  <!-- Background -->
+  <div class="fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-950 to-emerald-950/25"></div>
+    <div class="absolute -top-32 -right-24 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl"></div>
+    <div class="absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-sky-500/10 blur-3xl"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-20 border-b border-white/10 bg-slate-950/60 backdrop-blur-xl">
+    <div class="mx-auto max-w-md px-5 py-4 flex items-center justify-between gap-3">
+      <div>
+        <div class="text-sm font-extrabold tracking-tight">Kas Admin</div>
+        <div id="subText" class="text-[11px] text-slate-300/80">Memuat…</div>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="/app/home.html" class="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-extrabold hover:bg-white/10">Home</a>
+        <button id="btnReload" class="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-extrabold hover:bg-white/10">↻</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Org selector + Tabs -->
+  <div class="mx-auto max-w-md px-5 pt-4 space-y-3">
+    <div class="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-4">
+      <div class="flex items-center justify-between gap-3">
+        <div class="min-w-0">
+          <div class="text-xs font-bold text-slate-300">Organisasi</div>
+          <div class="mt-1 text-[11px] text-slate-400">Super Admin bisa pilih. Admin biasa otomatis terkunci.</div>
+        </div>
+        <select id="orgPick" class="rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20">
+          <option value="rt">RT</option>
+          <option value="pkk">PKK</option>
+          <option value="kt">Karang Taruna</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-2">
+      <div class="grid grid-cols-3 gap-2 text-[11px]">
+        <button class="tabBtn rounded-2xl bg-white/10 px-2 py-3 font-extrabold" data-tab="sum">Ringkasan</button>
+        <button class="tabBtn rounded-2xl px-2 py-3 text-slate-300/80 hover:bg-white/5" data-tab="pending">Pending</button>
+        <button class="tabBtn rounded-2xl px-2 py-3 text-slate-300/80 hover:bg-white/5" data-tab="history">Histori</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="mx-auto max-w-md px-5 pb-10 pt-5 space-y-5">
+    <!-- SUMMARY -->
+    <section id="tab_sum" class="space-y-4">
+      <div class="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class="text-sm font-extrabold">Saldo Kas</div>
+            <div class="mt-1 text-xs text-slate-300/80">Dari dokumen <code class="text-[11px]">org_wallets/{neighborhoodId_org}</code></div>
+          </div>
+          <span id="pillOrg" class="inline-flex rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[11px] font-extrabold">ORG</span>
+        </div>
+
+        <div class="mt-4 rounded-2xl border border-white/10 bg-slate-950/30 p-5">
+          <div class="text-[11px] text-slate-300/80">Saldo saat ini</div>
+          <div id="saldoNow" class="mt-1 text-2xl font-extrabold">Rp 0</div>
+          <div id="saldoMeta" class="mt-2 text-[11px] text-slate-400">—</div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-2 gap-3">
+          <div class="rounded-2xl border border-white/10 bg-slate-950/30 p-4">
+            <div class="text-[11px] text-slate-300/80">Pending masuk</div>
+            <div id="pendingCount" class="mt-1 text-lg font-extrabold">0</div>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-slate-950/30 p-4">
+            <div class="text-[11px] text-slate-300/80">Histori (30)</div>
+            <div id="histCount" class="mt-1 text-lg font-extrabold">0</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PENDING -->
+    <section id="tab_pending" class="hidden space-y-4">
+      <div class="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
+        <div class="text-sm font-extrabold">Transaksi Pending</div>
+        <div class="mt-1 text-xs text-slate-300/80">Approve akan menambah saldo kas.</div>
+
+        <div class="mt-4 grid grid-cols-2 gap-3">
+          <input id="pSearch" type="text" placeholder="Cari judul / uid…"
+            class="w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20" />
+          <select id="pCat" class="w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20">
+            <option value="all">Semua kategori</option>
+            <option value="iuran">Iuran</option>
+            <option value="donasi">Donasi</option>
+            <option value="lainnya">Lainnya</option>
+          </select>
+        </div>
+
+        <div id="pList" class="mt-4 space-y-3"></div>
+        <div id="pEmpty" class="hidden mt-4 text-center text-xs text-slate-300/80">Tidak ada transaksi pending.</div>
+      </div>
+    </section>
+
+    <!-- HISTORY -->
+    <section id="tab_history" class="hidden space-y-4">
+      <div class="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
+        <div class="text-sm font-extrabold">Histori Transaksi</div>
+        <div class="mt-1 text-xs text-slate-300/80">Menampilkan transaksi approved/rejected terbaru.</div>
+
+        <div class="mt-4 grid grid-cols-2 gap-3">
+          <input id="hSearch" type="text" placeholder="Cari judul / uid…"
+            class="w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20" />
+          <select id="hStatus" class="w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20">
+            <option value="all">Semua status</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+
+        <div id="hList" class="mt-4 space-y-3"></div>
+        <div id="hEmpty" class="hidden mt-4 text-center text-xs text-slate-300/80">Belum ada histori.</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // UI helpers
+    const subText = document.getElementById("subText");
+    const btnReload = document.getElementById("btnReload");
+
+    const orgPick = document.getElementById("orgPick");
+    const pillOrg = document.getElementById("pillOrg");
+
+    const tabBtns = document.querySelectorAll(".tabBtn");
+    const tabs = {
+      sum: document.getElementById("tab_sum"),
+      pending: document.getElementById("tab_pending"),
+      history: document.getElementById("tab_history"),
+    };
+    function setTab(name){
+      tabBtns.forEach(b=>{
+        const a = b.dataset.tab === name;
+        b.className = "tabBtn rounded-2xl px-2 py-3 text-[11px] " + (a ? "bg-white/10 font-extrabold" : "text-slate-300/80 hover:bg-white/5");
+      });
+      Object.entries(tabs).forEach(([k, el])=> el.classList.toggle("hidden", k !== name));
+    }
+    tabBtns.forEach(b=>b.addEventListener("click", ()=>setTab(b.dataset.tab)));
+    setTab("sum");
+
+    function fmtRp(n){ return "Rp " + Number(n||0).toLocaleString("id-ID"); }
+    function fmtDate(ts) {
+      try { const d = ts?.toDate ? ts.toDate() : new Date(ts); return d.toLocaleString("id-ID",{year:"numeric",month:"short",day:"2-digit",hour:"2-digit",minute:"2-digit"}); }
+      catch { return "—"; }
+    }
+    function esc(s=""){ return s.replace(/[&<>"']/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+
+    // Summary UI
+    const saldoNow = document.getElementById("saldoNow");
+    const saldoMeta = document.getElementById("saldoMeta");
+    const pendingCount = document.getElementById("pendingCount");
+    const histCount = document.getElementById("histCount");
+
+    // Pending UI
+    const pSearch = document.getElementById("pSearch");
+    const pCat = document.getElementById("pCat");
+    const pList = document.getElementById("pList");
+    const pEmpty = document.getElementById("pEmpty");
+
+    // History UI
+    const hSearch = document.getElementById("hSearch");
+    const hStatus = document.getElementById("hStatus");
+    const hList = document.getElementById("hList");
+    const hEmpty = document.getElementById("hEmpty");
+
+    // Local caches
+    let cachePending = [];
+    let cacheHistory = [];
+    let cacheWallet = null;
+
+    function renderPending(){
+      const q = (pSearch.value||"").trim().toLowerCase();
+      const cat = pCat.value;
+
+      const items = cachePending.filter(t=>{
+        const okQ = !q || (t.title||"").toLowerCase().includes(q) || (t.createdBy||"").toLowerCase().includes(q);
+        const okC = cat === "all" ? true : ((t.category||"").toLowerCase() === cat);
+        return okQ && okC;
+      });
+
+      pList.innerHTML = "";
+      pEmpty.classList.toggle("hidden", items.length !== 0);
+
+      items.forEach(t=>{
+        const proof = t.proofUrl
+          ? `<a class="text-[11px] font-bold text-white/90 hover:underline" target="_blank" rel="noreferrer" href="${esc(t.proofUrl)}">Lihat Bukti</a>`
+          : `<span class="text-[11px] text-slate-400">Tanpa bukti</span>`;
+
+        const html = `
+          <div class="rounded-2xl border border-white/10 bg-slate-950/30 p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="text-sm font-extrabold">${esc(t.title || "Pembayaran")}</div>
+                <div class="mt-1 text-[11px] text-slate-300/80">${esc((t.category||"-").toUpperCase())} • ${fmtDate(t.createdAt)}</div>
+                <div class="mt-1 text-[11px] text-slate-300/80">oleh: ${esc(t.createdBy || "-")}</div>
+                <div class="mt-2">${proof}</div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-extrabold">+ ${fmtRp(t.amount || 0)}</div>
+                <div class="mt-3 grid grid-cols-2 gap-2">
+                  <button class="btnApprove rounded-2xl bg-white px-3 py-2 text-xs font-extrabold text-slate-950" data-id="${t.id}">Approve</button>
+                  <button class="btnReject rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-extrabold hover:bg-white/10" data-id="${t.id}">Reject</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        pList.insertAdjacentHTML("beforeend", html);
+      });
+
+      document.querySelectorAll(".btnApprove").forEach(b=> b.addEventListener("click", ()=>window.__approveTx && window.__approveTx(b.dataset.id)));
+      document.querySelectorAll(".btnReject").forEach(b=> b.addEventListener("click", ()=>window.__rejectTx && window.__rejectTx(b.dataset.id)));
+    }
+
+    function renderHistory(){
+      const q = (hSearch.value||"").trim().toLowerCase();
+      const st = hStatus.value;
+
+      const items = cacheHistory.filter(t=>{
+        const s = t.approval?.status || "";
+        const okS = st === "all" ? true : s === st;
+        const okQ = !q || (t.title||"").toLowerCase().includes(q) || (t.createdBy||"").toLowerCase().includes(q);
+        return okS && okQ;
+      });
+
+      hList.innerHTML = "";
+      hEmpty.classList.toggle("hidden", items.length !== 0);
+
+      items.forEach(t=>{
+        const status = t.approval?.status || "-";
+        const badge = status === "approved"
+          ? `<span class="inline-flex rounded-full border border-white/10 bg-emerald-500/15 px-3 py-1 text-[11px] font-extrabold text-emerald-200">APPROVED</span>`
+          : `<span class="inline-flex rounded-full border border-white/10 bg-rose-500/15 px-3 py-1 text-[11px] font-extrabold text-rose-200">REJECTED</span>`;
+
+        const html = `
+          <div class="rounded-2xl border border-white/10 bg-slate-950/30 p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <div class="text-sm font-extrabold">${esc(t.title || "Transaksi")}</div>
+                  ${badge}
+                </div>
+                <div class="mt-1 text-[11px] text-slate-300/80">${esc((t.category||"-").toUpperCase())} • dibuat ${fmtDate(t.createdAt)}</div>
+                <div class="mt-1 text-[11px] text-slate-300/80">oleh: ${esc(t.createdBy || "-")} • diproses: ${esc(t.approval?.by || "-")}</div>
+                <div class="mt-1 text-[11px] text-slate-300/80">catatan: ${esc(t.approval?.reason || "-")}</div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-extrabold">${fmtRp(t.amount || 0)}</div>
+                <div class="mt-2 text-[11px] text-slate-400">${fmtDate(t.approval?.at)}</div>
+              </div>
+            </div>
+          </div>
+        `;
+        hList.insertAdjacentHTML("beforeend", html);
+      });
+    }
+
+    pSearch.addEventListener("input", renderPending);
+    pCat.addEventListener("change", renderPending);
+    hSearch.addEventListener("input", renderHistory);
+    hStatus.addEventListener("change", renderHistory);
+
+    btnReload.addEventListener("click", ()=>window.__reloadAll && window.__reloadAll());
+  </script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import {
+      getFirestore,
+      doc, getDoc, setDoc, updateDoc,
+      collection, query, where, orderBy, limit, getDocs,
+      serverTimestamp, increment
+    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    // ✅ GANTI sesuai Firebase kamu
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    const ROUTES = {
+      home: "/app/home.html",
+      login: "/login.html",
+      register: "/register.html"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let me = null;
+    let myProfile = null;
+    let neighborhoodId = null;
+    let myScopeOrg = null; // rt/pkk/kt (locked for non-super)
+
+    function go(p){ window.location.replace(p); }
+
+    function allowed(role){
+      role = role || "";
+      return role === "super_admin" || role.startsWith("rt_") || role.startsWith("pkk_") || role.startsWith("kt_");
+    }
+    function isSuper(role){ return role === "super_admin"; }
+
+    function roleToOrg(role){
+      if ((role||"").startsWith("rt_")) return "rt";
+      if ((role||"").startsWith("pkk_")) return "pkk";
+      if ((role||"").startsWith("kt_")) return "kt";
+      return null;
+    }
+    function walletDocId(neigh, org){ return `${neigh}_${org}`; }
+
+    async function guard(user){
+      me = user;
+      const usnap = await getDoc(doc(db, "users", user.uid));
+      if (!usnap.exists()) { go(ROUTES.register); return false; }
+      myProfile = usnap.data();
+
+      if (!allowed(myProfile.role || "")) { go(ROUTES.home); return false; }
+
+      neighborhoodId = myProfile.neighborhoodId || null;
+      if (!neighborhoodId) {
+        subText.textContent = `Role: ${myProfile.role} (neighborhoodId belum diatur)`;
+      } else {
+        subText.textContent = `Lingkungan: ${neighborhoodId} • Role: ${myProfile.role}`;
+      }
+
+      // scope org
+      myScopeOrg = isSuper(myProfile.role || "") ? null : roleToOrg(myProfile.role || "");
+      return true;
+    }
+
+    function applyOrgUI(){
+      const org = orgPick.value;
+      pillOrg.textContent = org.toUpperCase();
+
+      if (!isSuper(myProfile.role || "")) {
+        orgPick.value = myScopeOrg || "rt";
+        orgPick.disabled = true;
+      } else {
+        orgPick.disabled = false;
+      }
+      pillOrg.textContent = orgPick.value.toUpperCase();
+    }
+
+    async function loadWallet(org){
+      if (!neighborhoodId) {
+        cacheWallet = null;
+        saldoNow.textContent = "Rp 0";
+        saldoMeta.textContent = "neighborhoodId belum diatur.";
+        return;
+      }
+      const wid = walletDocId(neighborhoodId, org);
+      const wsnap = await getDoc(doc(db, "org_wallets", wid));
+      cacheWallet = wsnap.exists() ? wsnap.data() : null;
+
+      const bal = cacheWallet?.balance || 0;
+      saldoNow.textContent = fmtRp(bal);
+      saldoMeta.textContent = `Update: ${cacheWallet?.updatedAt ? fmtDate(cacheWallet.updatedAt) : "—"} • Doc: ${wid}`;
+    }
+
+    async function loadPending(org){
+      if (!neighborhoodId) { cachePending=[]; renderPending(); return; }
+
+      const qs = query(
+        collection(db, "finance_tx"),
+        where("neighborhoodId", "==", neighborhoodId),
+        where("org", "==", org),
+        where("approval.status", "==", "pending"),
+        orderBy("createdAt", "desc"),
+        limit(30)
+      );
+      const snap = await getDocs(qs);
+      const items = [];
+      snap.forEach(d=> items.push({ id:d.id, ...d.data() }));
+      cachePending = items;
+
+      pendingCount.textContent = String(items.length);
+      renderPending();
+    }
+
+    async function loadHistory(org){
+      if (!neighborhoodId) { cacheHistory=[]; renderHistory(); return; }
+
+      // NOTE: butuh index untuk where approval.status in + orderBy createdAt
+      // Untuk simple, kita ambil last 30 by createdAt lalu filter status di UI (approved/rejected)
+      const qs = query(
+        collection(db, "finance_tx"),
+        where("neighborhoodId", "==", neighborhoodId),
+        where("org", "==", org),
+        orderBy("createdAt", "desc"),
+        limit(30)
+      );
+      const snap = await getDocs(qs);
+      const items = [];
+      snap.forEach(d=> items.push({ id:d.id, ...d.data() }));
+
+      cacheHistory = items.filter(x => ["approved","rejected"].includes(x.approval?.status));
+      histCount.textContent = String(cacheHistory.length);
+      renderHistory();
+    }
+
+    function ensureScope(org){
+      if (isSuper(myProfile.role || "")) return true;
+      return org === myScopeOrg;
+    }
+
+    window.__approveTx = async (txId) => {
+      const org = orgPick.value;
+      if (!ensureScope(org)) return alert("Akses ditolak (org bukan scope admin).");
+
+      const t = cachePending.find(x=>x.id===txId);
+      if (!t) return;
+
+      if (!confirm(`Approve "${t.title}" sebesar ${fmtRp(t.amount)}?`)) return;
+
+      try{
+        await updateDoc(doc(db, "finance_tx", txId), {
+          "approval.status": "approved",
+          "approval.by": me.uid,
+          "approval.at": serverTimestamp(),
+          "approval.reason": ""
+        });
+
+        const wid = walletDocId(neighborhoodId, org);
+        await setDoc(doc(db, "org_wallets", wid), {
+          neighborhoodId,
+          org,
+          balance: increment(Number(t.amount || 0)),
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+
+        await reloadAll();
+      }catch(err){
+        console.error(err);
+        alert("Gagal approve. Cek Firestore Rules.");
+      }
+    };
+
+    window.__rejectTx = async (txId) => {
+      const org = orgPick.value;
+      if (!ensureScope(org)) return alert("Akses ditolak (org bukan scope admin).");
+
+      const reason = prompt("Alasan reject (opsional):") || "";
+      try{
+        await updateDoc(doc(db, "finance_tx", txId), {
+          "approval.status": "rejected",
+          "approval.by": me.uid,
+          "approval.at": serverTimestamp(),
+          "approval.reason": reason
+        });
+        await reloadAll();
+      }catch(err){
+        console.error(err);
+        alert("Gagal reject. Cek Firestore Rules.");
+      }
+    };
+
+    async function reloadAll(){
+      applyOrgUI();
+      const org = orgPick.value;
+      await Promise.all([
+        loadWallet(org),
+        loadPending(org),
+        loadHistory(org)
+      ]);
+    }
+    window.__reloadAll = reloadAll;
+
+    orgPick.addEventListener("change", reloadAll);
+
+    // Guard
+    onAuthStateChanged(auth, async (user)=>{
+      if (!user) { go(ROUTES.login); return; }
+      const ok = await guard(user);
+      if (!ok) return;
+
+      // set default org for non-super
+      if (!isSuper(myProfile.role || "")) {
+        orgPick.value = myScopeOrg || "rt";
+      } else {
+        orgPick.value = "rt";
+      }
+
+      await reloadAll();
+    });
+  </script>
+</body>
+</html>
