@@ -19,7 +19,7 @@ import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-
 const { auth, db } = initFirebase();
 
 /* =========================
-   UI helper (optional)
+   UI helper
    ========================= */
 export function humanAuthError(err) {
   const code = err?.code || "";
@@ -42,12 +42,36 @@ export async function getMyProfile(uid) {
 }
 
 export function normalizePhone(phone = "") {
-  const p = phone.trim();
+  const p = String(phone || "").trim();
   if (!p) return "";
-  // Normalisasi sederhana: 08xxx -> +628xxx
   if (p.startsWith("0")) return "+62" + p.slice(1);
   if (p.startsWith("62")) return "+" + p;
   return p;
+}
+
+/**
+ * Call server bootstrap:
+ * - server akan set super admin untuk user PERTAMA SAJA (atomic)
+ */
+async function bootstrapAdminIfFirstUser(user) {
+  try {
+    const token = await user.getIdToken(true);
+    const res = await fetch("/api/bootstrap-admin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({}) // payload optional
+    });
+
+    const out = await res.json().catch(() => ({}));
+    // out: { ok:true, upgraded:true|false, reason? }
+    return out;
+  } catch (e) {
+    // kalau API gagal, jangan block register
+    return { ok: false, error: e?.message || "bootstrap failed" };
+  }
 }
 
 /* =========================
@@ -56,7 +80,7 @@ export function normalizePhone(phone = "") {
    profileData minimal disarankan:
    {
      name, phone, nik, address, neighborhoodId,
-     role: "warga"
+     status? (optional), role? (abaikan - role diputuskan server)
    }
 */
 export async function registerWithEmail(email, password, profileData = {}) {
@@ -76,10 +100,7 @@ export async function registerWithEmail(email, password, profileData = {}) {
 
   const uid = cred.user.uid;
 
-  // Default role
-  const role = profileData.role || "warga";
-
-  // Simpan profile Firestore
+  // 1) Simpan profile default (AMAN): warga
   await upsertUserProfile(uid, {
     name: profileData.name || "",
     phone: normalizePhone(profileData.phone || ""),
@@ -87,11 +108,17 @@ export async function registerWithEmail(email, password, profileData = {}) {
     address: profileData.address || "",
     neighborhoodId: profileData.neighborhoodId || "",
 
-    role,
-    status: "active", // bisa dibuat "pending" kalau kamu mau verifikasi dulu
+    role: "warga",
+    status: profileData.status || "active"
   });
 
-  return { user: cred.user, uid };
+  // 2) Bootstrap super admin (server yang tentukan)
+  await bootstrapAdminIfFirstUser(cred.user);
+
+  // 3) Ambil profile terbaru (kalau upgraded, role sudah berubah)
+  const profile = await getMyProfile(uid);
+
+  return { user: cred.user, uid, profile };
 }
 
 /* =========================
@@ -107,12 +134,10 @@ export async function loginWithEmail(email, password) {
   // Pastikan profile ada
   const profile = await getMyProfile(cred.user.uid);
   if (!profile) {
-    // jika user ada di Auth tapi belum ada di Firestore
     go(ROUTES.register);
     return { user: cred.user, profile: null };
   }
 
-  // Kalau status suspended
   if (profile.status === "suspended") {
     throw new Error("Akun kamu sedang dinonaktifkan. Hubungi admin RT.");
   }
@@ -152,22 +177,20 @@ export async function resetPassword(email) {
 }
 
 /* =========================
-   GUARD (auto redirect)
-   - Dipakai di login.html supaya kalau sudah login, langsung ke dashboard
+   GUARD: jika sudah login -> redirect dashboard
    ========================= */
 export function redirectIfLoggedIn() {
   onAuthStateChanged(auth, async (user) => {
     if (!user) return;
     const profile = await getMyProfile(user.uid);
     if (!profile) return go(ROUTES.register);
-    if (profile.status === "suspended") return; // jangan redirect
+    if (profile.status === "suspended") return;
     go(routeByRole(profile.role || ""));
   });
 }
 
 /* =========================
-   GUARD (wajib login)
-   - Dipakai di halaman private: home, profil, kas, surat, inventaris, admin
+   GUARD: wajib login
    ========================= */
 export function requireLogin({ onReady } = {}) {
   onAuthStateChanged(auth, async (user) => {
@@ -177,7 +200,6 @@ export function requireLogin({ onReady } = {}) {
     if (!profile) return go(ROUTES.register);
 
     if (profile.status === "suspended") {
-      // kalau kamu punya halaman suspended khusus, arahkan ke sana
       throw new Error("Akun suspended.");
     }
 
