@@ -5,10 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
   <title>GUYUB | RT • PKK • Karang Taruna</title>
 
-  <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Font -->
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <style>
@@ -29,7 +26,6 @@
     <div class="w-full max-w-sm">
       <div class="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-7 shadow-2xl shadow-black/40">
         <div class="flex items-center gap-4">
-          <!-- Logo placeholder -->
           <div class="h-14 w-14 rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-500/20 to-sky-500/10 flex items-center justify-center">
             <span class="text-xl font-extrabold">G</span>
           </div>
@@ -50,7 +46,7 @@
           </div>
 
           <div id="hint" class="mt-4 text-[11px] text-slate-400">
-            Jika stuck lama, pastikan koneksi internet & konfigurasi Firebase sudah benar.
+            Jika stuck lama, biasanya karena: path firebase.js 404, rules Firestore menolak, atau koneksi.
           </div>
         </div>
       </div>
@@ -62,10 +58,8 @@
   </main>
 
   <script>
-    // tahun
     document.getElementById("year").textContent = new Date().getFullYear();
 
-    // animasi bar (kosmetik)
     const bar = document.getElementById("bar");
     let w = 33;
     const anim = setInterval(() => {
@@ -87,33 +81,52 @@
       return localStorage.getItem("guyub_onboarding_done") === "1";
     }
 
-    // expose ke module
     window.__GUYUB_SPLASH__ = { setStatus, go, onboardingSeen };
   </script>
 
-  <!-- App bootstrap -->
   <script type="module">
-    import { initFirebase, ROUTES, routeByRole } from "/assets/js/firebase.js";
+    import { initFirebase, ROUTES } from "/assets/js/firebase.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
     import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
     const { setStatus, go, onboardingSeen } = window.__GUYUB_SPLASH__;
 
-    // ROUTE tambahan (khusus halaman admin RT/PKK/KT kalau kamu memang pakai file itu)
-    // Kalau kamu belum punya rt.html/pkk.html/kt.html, biarkan routeByRole() dari firebase.js yg mengarah ke home/verifikasi/kasAdmin.
+    // Optional override jika file admin org ada
     const ROUTE_OVERRIDE = {
       adminRT: "/app/admin/rt.html",
       adminPKK: "/app/admin/pkk.html",
       adminKT: "/app/admin/kt.html",
     };
 
-    // Optional: override sederhana jika file admin org ada
     function routeByRoleOverride(role) {
       if (role === "super_admin") return ROUTES.verifikasi;
       if (role?.startsWith("rt_")) return ROUTE_OVERRIDE.adminRT || ROUTES.kasAdmin;
       if (role?.startsWith("pkk_")) return ROUTE_OVERRIDE.adminPKK || ROUTES.home;
       if (role?.startsWith("kt_")) return ROUTE_OVERRIDE.adminKT || ROUTES.home;
       return ROUTES.home;
+    }
+
+    // ---------- WATCHDOG: anti stuck ----------
+    const WATCHDOG_MS = 9000;
+    let watchdog = setTimeout(() => {
+      setStatus("Timeout. Mengarah ke login…");
+      setTimeout(() => {
+        if (!onboardingSeen()) go(ROUTES.onboarding);
+        else go(ROUTES.login);
+      }, 700);
+    }, WATCHDOG_MS);
+
+    function stopWatchdog() {
+      clearTimeout(watchdog);
+      watchdog = null;
+    }
+
+    // helper timeout untuk getDoc
+    function withTimeout(promise, ms = 7000, label = "timeout") {
+      return Promise.race([
+        promise,
+        new Promise((_, rej) => setTimeout(() => rej(new Error(label)), ms)),
+      ]);
     }
 
     try {
@@ -124,6 +137,9 @@
       setStatus("Mengecek sesi login…");
 
       onAuthStateChanged(auth, async (user) => {
+        stopWatchdog(); // auth callback sudah terpanggil (tidak stuck di auth)
+        console.log("[GUYUB] AUTH STATE:", user ? "LOGGED IN" : "LOGGED OUT", user?.uid);
+
         try {
           if (!user) {
             setStatus("Belum login.");
@@ -134,10 +150,18 @@
             return;
           }
 
+          // watchdog kedua: khusus firestore
+          const fw = setTimeout(() => {
+            setStatus("Timeout ambil profil. Mengarah ke login…");
+            setTimeout(() => go(ROUTES.login), 700);
+          }, 8000);
+
           setStatus("Mengambil profil & role…");
 
           const uref = doc(db, "users", user.uid);
-          const usnap = await getDoc(uref);
+          const usnap = await withTimeout(getDoc(uref), 7000, "getDoc users timeout");
+
+          clearTimeout(fw);
 
           if (!usnap.exists()) {
             setStatus("Profil belum lengkap. Mengarah ke pendaftaran…");
@@ -155,26 +179,31 @@
             return;
           }
 
-          // pilih salah satu:
-          // const target = routeByRole(role);          // pakai mapping di firebase.js
-          const target = routeByRoleOverride(role);    // pakai mapping override (rt/pkk/kt html)
+          const target = routeByRoleOverride(role);
 
           setStatus(`Masuk sebagai: ${String(role).replaceAll("_"," ")}`);
           setTimeout(() => go(target), 400);
 
         } catch (err) {
-          console.error(err);
-          setStatus("Terjadi kendala saat memuat profil. Mengarah ke login…");
+          console.error("[GUYUB] Splash error:", err);
+          const msg = String(err?.message || "");
+          if (msg.includes("Missing or insufficient permissions")) {
+            setStatus("Akses ditolak (Firestore Rules). Ke login…");
+          } else if (msg.toLowerCase().includes("timeout")) {
+            setStatus("Koneksi timeout. Ke login…");
+          } else {
+            setStatus("Terjadi kendala memuat profil. Ke login…");
+          }
           setTimeout(() => go(ROUTES.login), 900);
         }
       });
 
     } catch (e) {
-      console.error(e);
+      console.error("[GUYUB] Init error:", e);
       setStatus("Koneksi aplikasi gagal. Mengarah ke onboarding…");
       setTimeout(() => {
-        if (!window.__GUYUB_SPLASH__.onboardingSeen()) window.__GUYUB_SPLASH__.go(ROUTES.onboarding);
-        else window.__GUYUB_SPLASH__.go(ROUTES.login);
+        if (!onboardingSeen()) go(ROUTES.onboarding);
+        else go(ROUTES.login);
       }, 900);
     }
   </script>
