@@ -14,14 +14,12 @@
 </head>
 
 <body class="h-full bg-slate-950 text-slate-100 overflow-hidden">
-  <!-- Background -->
   <div class="fixed inset-0 -z-10">
     <div class="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-950 to-emerald-950/40"></div>
     <div class="absolute -top-32 -right-24 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl"></div>
     <div class="absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-sky-500/10 blur-3xl"></div>
   </div>
 
-  <!-- Splash -->
   <main class="h-full flex items-center justify-center px-6">
     <div class="w-full max-w-sm">
       <div class="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-7 shadow-2xl shadow-black/40">
@@ -38,15 +36,11 @@
         <div class="mt-6">
           <div class="text-sm font-semibold">Memuat aplikasi…</div>
           <div id="statusText" class="mt-1 text-xs text-slate-300/80">
-            Mengecek sesi & akses akun
+            Menghubungkan ke server...
           </div>
 
           <div class="mt-5 h-2 w-full overflow-hidden rounded-full bg-white/10">
-            <div id="bar" class="h-full w-1/3 rounded-full bg-white/40"></div>
-          </div>
-
-          <div id="hint" class="mt-4 text-[11px] text-slate-400">
-            Jika stuck: kemungkinan besar /assets/js/firebase.js 404 atau kena rewrite (balik HTML).
+            <div id="bar" class="h-full w-0 rounded-full bg-white/40 transition-all duration-300"></div>
           </div>
         </div>
       </div>
@@ -59,159 +53,138 @@
 
   <script>
     document.getElementById("year").textContent = new Date().getFullYear();
-
     const bar = document.getElementById("bar");
-    let w = 33;
+    const statusText = document.getElementById("statusText");
+
+    // Animasi progress bar palsu agar user merasa ada proses
+    let w = 10;
     const anim = setInterval(() => {
-      w = Math.min(92, w + Math.random() * 7);
+      w = Math.min(90, w + Math.random() * 15);
       bar.style.width = w + "%";
-    }, 450);
+    }, 500);
 
     function setStatus(txt) {
-      document.getElementById("statusText").textContent = txt;
+      statusText.textContent = txt;
     }
 
-    function go(path) {
+    function finishAndGo(path) {
       clearInterval(anim);
       bar.style.width = "100%";
-      window.location.replace(path);
+      setTimeout(() => {
+        window.location.replace(path);
+      }, 300); // delay dikit biar bar penuh terlihat
     }
 
-    function onboardingSeen() {
+    // Cek apakah user sudah pernah menyelesaikan onboarding
+    function checkOnboarding() {
       return localStorage.getItem("guyub_onboarding_done") === "1";
     }
 
-    window.__GUYUB_SPLASH__ = { setStatus, go, onboardingSeen };
+    // Expose ke global scope untuk script module
+    window.__SPLASH__ = { setStatus, finishAndGo, checkOnboarding };
   </script>
 
-  <!-- App bootstrap (v2 anti-stuck) -->
   <script type="module">
-    const { setStatus, go, onboardingSeen } = window.__GUYUB_SPLASH__;
+    // Ambil helper dari script UI di atas
+    const { setStatus, finishAndGo, checkOnboarding } = window.__SPLASH__;
 
-    // HARD watchdog: kalau module gagal jalan / nge-hang
-    const HARD_WATCHDOG = setTimeout(() => {
-      setStatus("Module tidak berjalan. Cek hosting / rewrite / assets.");
-      setTimeout(() => {
-        if (!onboardingSeen()) go("/onboarding.html");
-        else go("/login.html");
-      }, 900);
-    }, 9000);
+    // --- SAFETY WATCHDOG ---
+    // Jika dalam 10 detik tidak ada kepastian, paksa pindah.
+    // Ini mengatasi masalah jika module firebase gagal loading.
+    const SAFETY_TIMEOUT = setTimeout(() => {
+      console.warn("Safety watchdog triggered.");
+      const fallback = checkOnboarding() ? "/login.html" : "/onboarding.html";
+      finishAndGo(fallback);
+    }, 10000);
 
-    // helper timeout
-    const withTimeout = (p, ms = 7000, label = "timeout") =>
-      Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error(label)), ms))]);
-
-    // 1) Dynamic import firebase core
-    setStatus("Memuat core…");
-    let core;
+    // --- MAIN LOGIC ---
     try {
-      core = await import("/assets/js/firebase.js");
-    } catch (e) {
-      console.error("[GUYUB] gagal import /assets/js/firebase.js:", e);
-      const msg = String(e?.message || "");
+      setStatus("Memuat modul inti...");
+      
+      // Dynamic import agar kita bisa tangkap error jika file hilang
+      const firebaseModule = await import("/assets/js/firebase.js");
+      const { initFirebase, ROUTES, routeByRole } = firebaseModule;
 
-      // Kasus umum: file JS dibalas HTML karena rewrite -> Unexpected token '<'
-      if (msg.includes("Unexpected token") || msg.includes("<")) {
-        setStatus("Assets JS kena rewrite (balik HTML). Perbaiki vercel.json rewrites.");
-      } else {
-        setStatus("Gagal memuat core (cek /assets/js/firebase.js path/404).");
-      }
+      const authModule = await import("https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js");
+      const { onAuthStateChanged } = authModule;
+      
+      const firestoreModule = await import("https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js");
+      const { doc, getDoc } = firestoreModule;
 
-      clearTimeout(HARD_WATCHDOG);
-      setTimeout(() => {
-        if (!onboardingSeen()) go("/onboarding.html");
-        else go("/login.html");
-      }, 1200);
-      throw e;
-    }
+      const { auth, db } = initFirebase();
+      const DEFAULT_HOME = "/app/home.html";
 
-    clearTimeout(HARD_WATCHDOG);
+      setStatus("Mengecek status login...");
 
-    const { initFirebase, ROUTES } = core;
+      // Listener Auth
+      onAuthStateChanged(auth, async (user) => {
+        // Matikan watchdog karena auth sudah merespon
+        clearTimeout(SAFETY_TIMEOUT);
 
-    // 2) import firebase auth/firestore modules
-    const { onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js");
-    const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js");
-
-    // override role routing (optional)
-    const ROUTE_OVERRIDE = {
-      adminRT: "/app/admin/rt.html",
-      adminPKK: "/app/admin/pkk.html",
-      adminKT: "/app/admin/kt.html",
-    };
-
-    function routeByRoleOverride(role) {
-      if (role === "super_admin") return ROUTES.verifikasi;
-      if (role?.startsWith("rt_")) return ROUTE_OVERRIDE.adminRT || ROUTES.kasAdmin;
-      if (role?.startsWith("pkk_")) return ROUTE_OVERRIDE.adminPKK || ROUTES.home;
-      if (role?.startsWith("kt_")) return ROUTE_OVERRIDE.adminKT || ROUTES.home;
-      return ROUTES.home;
-    }
-
-    // 3) init + auth check
-    setStatus("Menyiapkan koneksi…");
-    const { auth, db } = initFirebase();
-
-    setStatus("Mengecek sesi login…");
-
-    const AUTH_WATCHDOG = setTimeout(() => {
-      setStatus("Auth timeout. Mengarah ke login…");
-      setTimeout(() => go(ROUTES.login), 900);
-    }, 9000);
-
-    onAuthStateChanged(auth, async (user) => {
-      clearTimeout(AUTH_WATCHDOG);
-      console.log("[GUYUB] AUTH:", user ? "IN" : "OUT", user?.uid);
-
-      try {
         if (!user) {
-          setStatus("Belum login.");
-          setTimeout(() => {
-            if (!onboardingSeen()) go(ROUTES.onboarding);
-            else go(ROUTES.login);
-          }, 450);
+          // KASUS 1: BELUM LOGIN
+          setStatus("Belum login. Mengarahkan...");
+          const target = checkOnboarding() ? ROUTES.login : ROUTES.onboarding;
+          finishAndGo(target);
           return;
         }
 
-        setStatus("Mengambil profil & role…");
+        // KASUS 2: SUDAH LOGIN DI AUTH -> CEK FIRESTORE
+        try {
+          setStatus("Memuat profil pengguna...");
+          
+          const userDocRef = doc(db, "users", user.uid);
+          const userSnap = await getDoc(userDocRef);
 
-        // Firestore timeout protection
-        const usnap = await withTimeout(getDoc(doc(db, "users", user.uid)), 7000, "getDoc users timeout");
+          if (!userSnap.exists()) {
+            // Login Auth sukses, tapi data Firestore tidak ada -> ke Register
+            setStatus("Profil belum ada. Ke pendaftaran...");
+            finishAndGo(ROUTES.register);
+            return;
+          }
 
-        if (!usnap.exists()) {
-          setStatus("Profil belum lengkap. Mengarah ke pendaftaran…");
-          setTimeout(() => go(ROUTES.register), 450);
-          return;
+          const userData = userSnap.data();
+
+          // Cek status blokir/suspend
+          if (userData.status === "suspended") {
+            setStatus("Akun dinonaktifkan.");
+            // Beri waktu baca sebentar, lalu lempar ke login
+            setTimeout(() => finishAndGo(ROUTES.login), 1500);
+            return;
+          }
+
+          // Routing berdasarkan Role
+          setStatus("Berhasil! Masuk ke aplikasi...");
+          let targetPath = DEFAULT_HOME;
+          
+          if (typeof routeByRole === 'function') {
+            // Gunakan fungsi routing dari firebase.js jika ada
+            const calculatedRoute = routeByRole(userData.role || "warga");
+            if (calculatedRoute) targetPath = calculatedRoute;
+          }
+
+          finishAndGo(targetPath);
+
+        } catch (err) {
+          console.error("Firestore Error:", err);
+          // Jika gagal ambil profil (misal koneksi putus), aman ke login saja
+          setStatus("Gagal memuat profil. Kembali ke login...");
+          finishAndGo(ROUTES.login);
         }
+      });
 
-        const u = usnap.data();
-        const role = u.role || "warga";
-        const status = u.status || "active";
-
-        if (status === "suspended") {
-          setStatus("Akun dinonaktifkan. Silakan hubungi pengurus.");
-          setTimeout(() => go(ROUTES.login), 800);
-          return;
-        }
-
-        setStatus(`Masuk sebagai: ${String(role).replaceAll("_"," ")}`);
-        setTimeout(() => go(routeByRoleOverride(role)), 400);
-
-      } catch (err) {
-        console.error("[GUYUB] Splash error:", err);
-        const msg = String(err?.message || "");
-
-        if (msg.includes("Missing or insufficient permissions")) {
-          setStatus("Akses ditolak (Firestore Rules). Ke login…");
-        } else if (msg.toLowerCase().includes("timeout")) {
-          setStatus("Koneksi timeout saat ambil profil. Ke login…");
-        } else {
-          setStatus("Gagal memuat profil. Ke login…");
-        }
-
-        setTimeout(() => go(ROUTES.login), 900);
-      }
-    });
+    } catch (err) {
+      console.error("Critical Module Error:", err);
+      // Error saat import file JS (misal 404 atau syntax error)
+      setStatus("Gagal memuat sistem. Cek koneksi.");
+      clearTimeout(SAFETY_TIMEOUT);
+      
+      // Fallback aman
+      setTimeout(() => {
+         const fallback = checkOnboarding() ? "/login.html" : "/onboarding.html";
+         finishAndGo(fallback);
+      }, 1000);
+    }
   </script>
 </body>
 </html>
