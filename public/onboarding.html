@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="id" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Onboarding | GUYUB</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    body { font-family: "Plus Jakarta Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    /* smoother swipe */
+    .snap-x { scroll-snap-type: x mandatory; }
+    .snap-center { scroll-snap-align: center; }
+  </style>
+</head>
+
+<body class="h-full bg-slate-950 text-slate-100 overflow-hidden">
+  <!-- Background -->
+  <div class="fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-950 to-emerald-950/40"></div>
+    <div class="absolute -top-32 -right-24 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl"></div>
+    <div class="absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-sky-500/10 blur-3xl"></div>
+  </div>
+
+  <!-- Top bar -->
+  <header class="px-6 pt-6">
+    <div class="mx-auto max-w-md flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="h-9 w-9 rounded-2xl border border-white/10 bg-white/5 backdrop-blur flex items-center justify-center">
+          <span class="font-extrabold">G</span>
+        </div>
+        <div class="text-sm font-extrabold tracking-tight">GUYUB</div>
+      </div>
+
+      <button id="btnSkip"
+        class="text-xs font-semibold text-slate-300/80 hover:text-white transition">
+        Lewati
+      </button>
+    </div>
+  </header>
+
+  <!-- Slides -->
+  <main class="px-6 pt-6 pb-28 h-full">
+    <div class="mx-auto max-w-md h-full flex flex-col">
+      <!-- slider viewport -->
+      <div id="viewport"
+        class="flex-1 overflow-x-auto overflow-y-hidden snap-x scroll-smooth flex gap-4 pb-2"
+        style="scrollbar-width:none;">
+        <!-- Slide 1 -->
+        <section class="min-w-full snap-center rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-7">
+          <div class="h-52 rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-500/15 to-sky-500/10 flex items-center justify-center">
+            <div class="text-center">
+              <div class="text-4xl font-extrabold">📣</div>
+              <div class="mt-3 text-sm font-bold">Info Lingkungan Resmi</div>
+              <div class="mt-1 text-xs text-slate-300/80">Pengumuman RT, PKK, dan Karang Taruna rapi, mudah dicari.</div>
+            </div>
+          </div>
+          <h1 class="mt-6 text-xl font-extrabold tracking-tight">Satu tempat untuk semua info</h1>
+          <p class="mt-2 text-sm text-slate-300/90">
+            Tidak perlu scroll chat panjang. Semua pengumuman, agenda, dan dokumentasi tersimpan dengan jelas.
+          </p>
+        </section>
+
+        <!-- Slide 2 -->
+        <section class="min-w-full snap-center rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-7">
+          <div class="h-52 rounded-2xl border border-white/10 bg-gradient-to-br from-sky-500/15 to-emerald-500/10 flex items-center justify-center">
+            <div class="text-center">
+              <div class="text-4xl font-extrabold">💳</div>
+              <div class="mt-3 text-sm font-bold">Kas Transparan</div>
+              <div class="mt-1 text-xs text-slate-300/80">Kas RT, PKK, dan Karang Taruna terpisah & tercatat.</div>
+            </div>
+          </div>
+          <h2 class="mt-6 text-xl font-extrabold tracking-tight">Keuangan jelas, laporan mudah</h2>
+          <p class="mt-2 text-sm text-slate-300/90">
+            Pemasukan, pengeluaran, bukti transaksi, dan laporan bulanan bisa dilihat sesuai akses.
+          </p>
+        </section>
+
+        <!-- Slide 3 -->
+        <section class="min-w-full snap-center rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-7">
+          <div class="h-52 rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-500/15 to-slate-500/10 flex items-center justify-center">
+            <div class="text-center">
+              <div class="text-4xl font-extrabold">🛠️</div>
+              <div class="mt-3 text-sm font-bold">Aduan & Kegiatan Tercatat</div>
+              <div class="mt-1 text-xs text-slate-300/80">Ada status proses, bukti, dan riwayat.</div>
+            </div>
+          </div>
+          <h2 class="mt-6 text-xl font-extrabold tracking-tight">Guyub itu kolaborasi</h2>
+          <p class="mt-2 text-sm text-slate-300/90">
+            Buat aduan/aspirasi, daftar kegiatan, dan pantau progresnya tanpa bingung.
+          </p>
+        </section>
+      </div>
+
+      <!-- Dots -->
+      <div class="mt-5 flex items-center justify-center gap-2">
+        <span class="dot h-2 w-2 rounded-full bg-white/70"></span>
+        <span class="dot h-2 w-2 rounded-full bg-white/20"></span>
+        <span class="dot h-2 w-2 rounded-full bg-white/20"></span>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bottom actions -->
+  <footer class="fixed bottom-0 left-0 right-0 px-6 pb-6">
+    <div class="mx-auto max-w-md rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-4">
+      <div class="flex items-center gap-3">
+        <button id="btnBack"
+          class="hidden flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-slate-100">
+          Kembali
+        </button>
+
+        <button id="btnNext"
+          class="flex-1 rounded-2xl bg-white text-slate-950 px-4 py-3 text-sm font-extrabold">
+          Lanjut
+        </button>
+      </div>
+
+      <div class="mt-3 flex items-center justify-between text-[11px] text-slate-400">
+        <span id="stepText">1 dari 3</span>
+        <a href="/login.html" class="hover:text-slate-200">Sudah punya akun? Masuk</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const viewport = document.getElementById("viewport");
+    const dots = Array.from(document.querySelectorAll(".dot"));
+    const btnNext = document.getElementById("btnNext");
+    const btnBack = document.getElementById("btnBack");
+    const btnSkip = document.getElementById("btnSkip");
+    const stepText = document.getElementById("stepText");
+
+    const SLIDES = 3;
+    let index = 0;
+
+    function markDoneAndGo() {
+      localStorage.setItem("guyub_onboarding_done", "1");
+      window.location.replace("/login.html");
+    }
+
+    function setIndex(i) {
+      index = Math.max(0, Math.min(SLIDES - 1, i));
+
+      // scroll to slide
+      const slideWidth = viewport.clientWidth + 16; // gap-4 => 16px
+      viewport.scrollTo({ left: slideWidth * index, behavior: "smooth" });
+
+      // dots
+      dots.forEach((d, k) => d.className = "dot h-2 w-2 rounded-full " + (k === index ? "bg-white/70" : "bg-white/20"));
+
+      // buttons
+      btnBack.classList.toggle("hidden", index === 0);
+      btnNext.textContent = (index === SLIDES - 1) ? "Mulai" : "Lanjut";
+      stepText.textContent = `${index + 1} dari ${SLIDES}`;
+    }
+
+    // Detect slide by scroll
+    let scrollTimer;
+    viewport.addEventListener("scroll", () => {
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(() => {
+        const slideWidth = viewport.clientWidth + 16;
+        const i = Math.round(viewport.scrollLeft / slideWidth);
+        setIndex(i);
+      }, 80);
+    }, { passive: true });
+
+    // Touch swipe feel improvements
+    viewport.addEventListener("touchstart", () => {}, { passive: true });
+
+    btnNext.addEventListener("click", () => {
+      if (index === SLIDES - 1) return markDoneAndGo();
+      setIndex(index + 1);
+    });
+
+    btnBack.addEventListener("click", () => setIndex(index - 1));
+    btnSkip.addEventListener("click", markDoneAndGo);
+
+    // Init
+    setIndex(0);
+  </script>
+</body>
+</html>
