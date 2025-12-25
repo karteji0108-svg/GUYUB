@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="id" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Surat | GUYUB</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: "Plus Jakarta Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    /* Print */
+    @media print {
+      body { background: white !important; color: #111827 !important; }
+      .no-print { display: none !important; }
+      .print-card { border: none !important; background: white !important; }
+    }
+  </style>
+</head>
+
+<body class="h-full bg-slate-950 text-slate-100 overflow-y-auto">
+  <!-- BG -->
+  <div class="fixed inset-0 -z-10 no-print">
+    <div class="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-950 to-fuchsia-950/25"></div>
+    <div class="absolute -top-32 -right-24 h-80 w-80 rounded-full bg-fuchsia-500/10 blur-3xl"></div>
+    <div class="absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-sky-500/10 blur-3xl"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-20 border-b border-white/10 bg-slate-950/60 backdrop-blur-xl no-print">
+    <div class="mx-auto max-w-md px-5 py-4 flex items-center justify-between gap-3">
+      <div>
+        <div class="text-sm font-extrabold tracking-tight">Surat</div>
+        <div id="subText" class="text-[11px] text-slate-300/80">Memuat…</div>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="/app/home.html" class="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-extrabold hover:bg-white/10">Home</a>
+        <button id="btnReload" class="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-extrabold hover:bg-white/10">↻</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <div class="mx-auto max-w-md px-5 pt-4 space-y-3 no-print">
+    <div class="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-2">
+      <div class="grid grid-cols-2 gap-2 text-[11px]">
+        <button class="tabBtn rounded-2xl bg-white/10 px-2 py-3 font-extrabold" data-tab="buat">Buat Surat</button>
+        <button class="tabBtn rounded-2xl px-2 py-3 text-slate-300/80 hover:bg-white/5" data-tab="admin">Verifikasi</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="mx-auto max-w-md px-5 pb-24 pt-5 space-y-5">
+    <!-- BUAT -->
+    <section id="tab_buat" class="space-y-4">
+      <div class="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 no-print">
+        <div class="text-sm font-extrabold">Generator Surat</div>
+        <div class="mt-1 text-xs text-slate-300/80">Pilih jenis surat, isi detail, lalu cetak jadi PDF.</div>
+
+        <div id="alert" class="hidden mt-4 rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-xs text-slate-200"></div>
+
+        <form id="form" class="mt-4 space-y-3">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs font-semibold text-slate-300">Jenis Surat</label>
+              <select id="type" class="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20">
+                <option value="domisili">Surat Keterangan Domisili</option>
+                <option value="pengantar">Surat Pengantar</option>
+                <option value="usaha">Surat Keterangan Usaha</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-slate-300">Untuk Organisasi</label>
+              <select id="org" class="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20">
+                <option value="rt">RT</option>
+                <option value="pkk">PKK</option>
+                <option value="kt">Karang Taruna</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs font-semibold text-slate-300">Keperluan</label>
+            <input id="purpose" required
+              class="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20"
+              placeholder="contoh: Administrasi sekolah / Bank / BPJS / dll" />
+          </div>
+
+          <div id="extraWrap" class="space-y-3">
+            <div id="usahaWrap" class="hidden">
+              <label class="text-xs font-semibold text-slate-300">Nama Usaha</label>
+              <input id="bizName"
+                class="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20"
+                placeholder="contoh: Warung Sembako Ibu Sari" />
+              <div class="mt-2 text-[11px] text-slate-400">Untuk surat keterangan usaha.</div>
+            </div>
+
+            <div>
+              <label class="text-xs font-semibold text-slate-300">Catatan (opsional)</label>
+              <input id="note"
+                class="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20"
+                placeholder="opsional: tambahan keterangan" />
+            </div>
+          </div>
+
+          <button id="btnPreview" class="w-full rounded-2xl bg-white px-4 py-3 text-sm font-extrabold text-slate-950 disabled:opacity-60">
+            Buat Preview
+          </button>
+        </form>
+      </div>
+
+      <!-- Preview / Print -->
+      <div id="previewCard" class="hidden rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 print-card">
+        <div class="flex items-center justify-between gap-3 no-print">
+          <div class="text-sm font-extrabold">Preview Surat</div>
+          <div class="flex gap-2">
+            <button id="btnSaveDb" class="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-extrabold hover:bg-white/10">Simpan</button>
+            <button id="btnPrint" class="rounded-2xl bg-white px-4 py-2 text-xs font-extrabold text-slate-950">Cetak / PDF</button>
+          </div>
+        </div>
+
+        <!-- Actual printable content -->
+        <article id="paper" class="mt-4 rounded-2xl border border-white/10 bg-white p-6 text-slate-900">
+          <div class="text-center">
+            <div class="text-sm font-extrabold">PEMERINTAH KELURAHAN ________</div>
+            <div class="text-xs">KECAMATAN ________ • KOTA/KAB ________</div>
+            <div class="mt-2 border-t border-slate-300"></div>
+            <div id="pTitle" class="mt-4 text-lg font-extrabold uppercase">SURAT</div>
+            <div id="pNo" class="mt-1 text-xs">Nomor: —</div>
+          </div>
+
+          <div class="mt-6 text-sm leading-6">
+            <p>Yang bertanda tangan di bawah ini, Ketua RT setempat, menerangkan bahwa:</p>
+
+            <div class="mt-4 grid grid-cols-3 gap-2 text-sm">
+              <div class="font-semibold">Nama</div><div class="col-span-2" id="pName">—</div>
+              <div class="font-semibold">NIK</div><div class="col-span-2" id="pNik">—</div>
+              <div class="font-semibold">Alamat</div><div class="col-span-2" id="pAddr">—</div>
+              <div class="font-semibold">No. HP</div><div class="col-span-2" id="pPhone">—</div>
+            </div>
+
+            <p class="mt-4" id="pBody">—</p>
+
+            <div class="mt-6">
+              <div class="text-sm">Demikian surat ini dibuat untuk dipergunakan sebagaimana mestinya.</div>
+            </div>
+
+            <div class="mt-8 grid grid-cols-2 gap-10">
+              <div>
+                <div id="pPlaceDate" class="text-sm">________, ___/___/20__</div>
+                <div class="mt-10 text-sm font-semibold">Pemohon</div>
+                <div class="mt-16 text-sm font-semibold underline" id="pSignerUser">—</div>
+              </div>
+              <div>
+                <div class="text-sm">Mengetahui,</div>
+                <div class="text-sm font-semibold" id="pSignerAdminRole">Ketua RT</div>
+                <div class="mt-16 text-sm font-semibold underline">________________________</div>
+                <div class="mt-1 text-xs text-slate-600">Tanda tangan & stempel</div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- History (my letters) -->
+      <div class="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 no-print">
+        <div class="flex items-center justify-between">
+          <div class="text-sm font-extrabold">Riwayat Surat Saya</div>
+          <span class="text-[11px] text-slate-400">max 20</span>
+        </div>
+        <div id="myList" class="mt-4 space-y-3"></div>
+        <div id="myEmpty" class="hidden mt-4 text-center text-xs text-slate-300/80">Belum ada surat.</div>
+      </div>
+    </section>
+
+    <!-- ADMIN VERIF -->
+    <section id="tab_admin" class="hidden space-y-4">
+      <div class="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 no-print">
+        <div class="text-sm font-extrabold">Verifikasi Surat (Admin)</div>
+        <div class="mt-1 text-xs text-slate-300/80">Hanya <b>rt_*</b> / <b>super_admin</b> yang bisa approve.</div>
+
+        <div class="mt-4 grid grid-cols-2 gap-3">
+          <input id="aSearch" type="text" placeholder="Cari nama / uid / nomor…"
+            class="w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20" />
+          <select id="aStatus" class="w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm outline-none focus:border-white/20">
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="all">Semua</option>
+          </select>
+        </div>
+
+        <div id="aList" class="mt-4 space-y-3"></div>
+        <div id="aEmpty" class="hidden mt-4 text-center text-xs text-slate-300/80">Tidak ada data.</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Tabs
+    const tabBtns = document.querySelectorAll(".tabBtn");
+    const tab_buat = document.getElementById("tab_buat");
+    const tab_admin = document.getElementById("tab_admin");
+    function setTab(name){
+      tabBtns.forEach(b=>{
+        const a = b.dataset.tab === name;
+        b.className = "tabBtn rounded-2xl px-2 py-3 text-[11px] " + (a ? "bg-white/10 font-extrabold" : "text-slate-300/80 hover:bg-white/5");
+      });
+      tab_buat.classList.toggle("hidden", name !== "buat");
+      tab_admin.classList.toggle("hidden", name !== "admin");
+    }
+    tabBtns.forEach(b=>b.addEventListener("click", ()=>setTab(b.dataset.tab)));
+    setTab("buat");
+
+    // UI
+    const subText = document.getElementById("subText");
+    const btnReload = document.getElementById("btnReload");
+
+    const alertBox = document.getElementById("alert");
+    function showAlert(msg){ alertBox.textContent = msg; alertBox.classList.remove("hidden"); }
+    function hideAlert(){ alertBox.classList.add("hidden"); alertBox.textContent=""; }
+
+    const type = document.getElementById("type");
+    const org = document.getElementById("org");
+    const purpose = document.getElementById("purpose");
+    const note = document.getElementById("note");
+    const bizName = document.getElementById("bizName");
+    const usahaWrap = document.getElementById("usahaWrap");
+
+    const previewCard = document.getElementById("previewCard");
+    const btnPrint = document.getElementById("btnPrint");
+    const btnPreview = document.getElementById("btnPreview");
+    const btnSaveDb = document.getElementById("btnSaveDb");
+
+    // paper fields
+    const pTitle = document.getElementById("pTitle");
+    const pNo = document.getElementById("pNo");
+    const pName = document.getElementById("pName");
+    const pNik = document.getElementById("pNik");
+    const pAddr = document.getElementById("pAddr");
+    const pPhone = document.getElementById("pPhone");
+    const pBody = document.getElementById("pBody");
+    const pPlaceDate = document.getElementById("pPlaceDate");
+    const pSignerUser = document.getElementById("pSignerUser");
+    const pSignerAdminRole = document.getElementById("pSignerAdminRole");
+
+    // lists
+    const myList = document.getElementById("myList");
+    const myEmpty = document.getElementById("myEmpty");
+
+    const aSearch = document.getElementById("aSearch");
+    const aStatus = document.getElementById("aStatus");
+    const aList = document.getElementById("aList");
+    const aEmpty = document.getElementById("aEmpty");
+
+    function esc(s=""){ return s.replace(/[&<>"']/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+    function fmtDate(ts){
+      try{ const d = ts?.toDate ? ts.toDate() : new Date(ts); return d.toLocaleString("id-ID",{year:"numeric",month:"short",day:"2-digit"}); }catch{ return "—"; }
+    }
+    function fmtNo(prefix, d){
+      const yy = String(d.getFullYear()).slice(-2);
+      const mm = String(d.getMonth()+1).padStart(2,"0");
+      const dd = String(d.getDate()).padStart(2,"0");
+      const rnd = String(Math.floor(Math.random()*900)+100);
+      return `${prefix}/${dd}${mm}${yy}/${rnd}`;
+    }
+
+    type.addEventListener("change", ()=>{
+      usahaWrap.classList.toggle("hidden", type.value !== "usaha");
+    });
+
+    btnPrint.addEventListener("click", ()=>window.print());
+    btnReload.addEventListener("click", ()=>window.__reloadAll && window.__reloadAll());
+
+    // Local state set from firebase module
+    let __draft = null; // preview payload
+    window.__setDraft = (d)=>{ __draft = d; };
+    window.__getDraft = ()=>__draft;
+
+    // render functions assigned from module
+    aSearch.addEventListener("input", ()=>window.__renderAdmin && window.__renderAdmin());
+    aStatus.addEventListener("change", ()=>window.__renderAdmin && window.__renderAdmin());
+  </script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import {
+      getFirestore,
+      doc, getDoc,
+      collection, query, where, orderBy, limit, getDocs,
+      addDoc, updateDoc,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    // ✅ GANTI sesuai Firebase kamu
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    const ROUTES = {
+      home: "/app/home.html",
+      login: "/login.html",
+      register: "/register.html"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let me = null;
+    let profile = null;
+    let neighborhoodId = null;
+
+    let cacheMy = [];
+    let cacheAdmin = [];
+
+    function go(p){ window.location.replace(p); }
+    function roleOrg(role){
+      if ((role||"").startsWith("rt_")) return "rt";
+      if ((role||"").startsWith("pkk_")) return "pkk";
+      if ((role||"").startsWith("kt_")) return "kt";
+      return null;
+    }
+    function isRtAdmin(role){
+      role = role || "";
+      return role === "super_admin" || role.startsWith("rt_");
+    }
+
+    function letterTitle(t){
+      if (t==="domisili") return "SURAT KETERANGAN DOMISILI";
+      if (t==="pengantar") return "SURAT PENGANTAR";
+      if (t==="usaha") return "SURAT KETERANGAN USAHA";
+      return "SURAT";
+    }
+
+    function adminRoleLabel(){
+      // untuk print: default Ketua RT
+      return "Ketua RT";
+    }
+
+    function buildBody(d){
+      const keperluan = d.purpose || "-";
+      if (d.type === "domisili") {
+        return `Berdasarkan data yang ada, yang bersangkutan benar berdomisili di wilayah lingkungan setempat. Surat ini dibuat untuk keperluan: ${keperluan}.`;
+      }
+      if (d.type === "pengantar") {
+        return `Surat pengantar ini dibuat untuk keperluan: ${keperluan}.`;
+      }
+      if (d.type === "usaha") {
+        const usaha = d.bizName || "—";
+        return `Yang bersangkutan benar memiliki/menjalankan usaha dengan nama: ${usaha}. Surat ini dibuat untuk keperluan: ${keperluan}.`;
+      }
+      return `Surat ini dibuat untuk keperluan: ${keperluan}.`;
+    }
+
+    function applyPreview(d){
+      previewCard.classList.remove("hidden");
+
+      // fill
+      pTitle.textContent = letterTitle(d.type);
+      pNo.textContent = `Nomor: ${d.letterNo}`;
+
+      pName.textContent = d.userName || "—";
+      pNik.textContent = d.userNik || "—";
+      pAddr.textContent = d.userAddress || "—";
+      pPhone.textContent = d.userPhone || "—";
+
+      pBody.textContent = buildBody(d) + (d.note ? ` Catatan: ${d.note}` : "");
+      pSignerUser.textContent = d.userName || "—";
+      pSignerAdminRole.textContent = adminRoleLabel();
+
+      const now = new Date();
+      const dateStr = now.toLocaleDateString("id-ID",{year:"numeric",month:"long",day:"2-digit"});
+      pPlaceDate.textContent = `________, ${dateStr}`;
+
+      window.__setDraft(d);
+    }
+
+    async function loadMyLetters(){
+      if (!me) return;
+      const qs = query(
+        collection(db, "letters"),
+        where("createdBy", "==", me.uid),
+        orderBy("createdAt", "desc"),
+        limit(20)
+      );
+      const snap = await getDocs(qs);
+      const items = [];
+      snap.forEach(d=> items.push({ id:d.id, ...d.data() }));
+      cacheMy = items;
+
+      myList.innerHTML = "";
+      myEmpty.classList.toggle("hidden", items.length !== 0);
+
+      items.forEach(x=>{
+        const st = x.approval?.status || "pending";
+        const badge = st==="approved"
+          ? `<span class="inline-flex rounded-full border border-white/10 bg-emerald-500/15 px-3 py-1 text-[11px] font-extrabold text-emerald-200">APPROVED</span>`
+          : (st==="rejected"
+            ? `<span class="inline-flex rounded-full border border-white/10 bg-rose-500/15 px-3 py-1 text-[11px] font-extrabold text-rose-200">REJECTED</span>`
+            : `<span class="inline-flex rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[11px] font-extrabold">PENDING</span>`);
+
+        myList.insertAdjacentHTML("beforeend", `
+          <div class="rounded-2xl border border-white/10 bg-slate-950/30 p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <div class="text-sm font-extrabold">${esc(letterTitle(x.type))}</div>
+                  ${badge}
+                </div>
+                <div class="mt-1 text-[11px] text-slate-300/80">No: ${esc(x.letterNo||"-")} • ${fmtDate(x.createdAt)}</div>
+                <div class="mt-1 text-[11px] text-slate-300/80">Keperluan: ${esc(x.purpose||"-")}</div>
+              </div>
+              <button class="btnRePreview rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-extrabold hover:bg-white/10" data-id="${x.id}">
+                Preview
+              </button>
+            </div>
+          </div>
+        `);
+      });
+
+      document.querySelectorAll(".btnRePreview").forEach(b=>{
+        b.addEventListener("click", ()=>{
+          const x = cacheMy.find(z=>z.id===b.dataset.id);
+          if (!x) return;
+          applyPreview(x);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+      });
+    }
+
+    async function loadAdminLetters(){
+      // only admin RT/super
+      if (!isRtAdmin(profile?.role)) {
+        tabBtns.forEach(b=>{ if (b.dataset.tab==="admin") b.classList.add("hidden"); });
+        return;
+      }
+
+      // super_admin boleh lihat semua, admin RT dibatasi neighborhood
+      let qs;
+      if (profile.role === "super_admin") {
+        qs = query(collection(db, "letters"), orderBy("createdAt", "desc"), limit(50));
+      } else {
+        if (!neighborhoodId) return;
+        qs = query(
+          collection(db, "letters"),
+          where("neighborhoodId", "==", neighborhoodId),
+          orderBy("createdAt", "desc"),
+          limit(50)
+        );
+      }
+
+      const snap = await getDocs(qs);
+      const items = [];
+      snap.forEach(d=> items.push({ id:d.id, ...d.data() }));
+      cacheAdmin = items;
+      window.__renderAdmin();
+    }
+
+    window.__renderAdmin = function(){
+      const q = (aSearch.value||"").trim().toLowerCase();
+      const st = aStatus.value;
+
+      const items = cacheAdmin.filter(x=>{
+        const stOk = st==="all" ? true : ((x.approval?.status || "pending") === st);
+        const qOk = !q || (x.userName||"").toLowerCase().includes(q) || (x.createdBy||"").toLowerCase().includes(q) || (x.letterNo||"").toLowerCase().includes(q);
+        return stOk && qOk;
+      });
+
+      aList.innerHTML = "";
+      aEmpty.classList.toggle("hidden", items.length !== 0);
+
+      items.forEach(x=>{
+        const st2 = x.approval?.status || "pending";
+        const badge = st2==="approved"
+          ? `<span class="inline-flex rounded-full border border-white/10 bg-emerald-500/15 px-3 py-1 text-[11px] font-extrabold text-emerald-200">APPROVED</span>`
+          : (st2==="rejected"
+            ? `<span class="inline-flex rounded-full border border-white/10 bg-rose-500/15 px-3 py-1 text-[11px] font-extrabold text-rose-200">REJECTED</span>`
+            : `<span class="inline-flex rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[11px] font-extrabold">PENDING</span>`);
+
+        const actions = (st2==="pending")
+          ? `
+            <div class="grid grid-cols-2 gap-2 mt-3">
+              <button class="btnApprove rounded-2xl bg-white px-3 py-2 text-xs font-extrabold text-slate-950" data-id="${x.id}">Approve</button>
+              <button class="btnReject rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-extrabold hover:bg-white/10" data-id="${x.id}">Reject</button>
+            </div>
+          `
+          : ``;
+
+        aList.insertAdjacentHTML("beforeend", `
+          <div class="rounded-2xl border border-white/10 bg-slate-950/30 p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <div class="text-sm font-extrabold">${esc(x.userName||"-")}</div>
+                  ${badge}
+                </div>
+                <div class="mt-1 text-[11px] text-slate-300/80">${esc(letterTitle(x.type))} • No: ${esc(x.letterNo||"-")}</div>
+                <div class="mt-1 text-[11px] text-slate-300/80">Keperluan: ${esc(x.purpose||"-")}</div>
+                <div class="mt-1 text-[11px] text-slate-300/80">Tanggal: ${fmtDate(x.createdAt)} • neigh: ${esc(x.neighborhoodId||"-")}</div>
+                ${actions}
+              </div>
+              <button class="btnAdminPreview rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-extrabold hover:bg-white/10" data-id="${x.id}">
+                Preview
+              </button>
+            </div>
+          </div>
+        `);
+      });
+
+      document.querySelectorAll(".btnAdminPreview").forEach(b=>{
+        b.addEventListener("click", ()=>{
+          const x = cacheAdmin.find(z=>z.id===b.dataset.id);
+          if (!x) return;
+          applyPreview(x);
+          setTab("buat");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+      });
+
+      document.querySelectorAll(".btnApprove").forEach(b=>{
+        b.addEventListener("click", async ()=>{
+          const id = b.dataset.id;
+          if (!confirm("Approve surat ini?")) return;
+          await updateDoc(doc(db, "letters", id), {
+            "approval.status": "approved",
+            "approval.by": me.uid,
+            "approval.at": serverTimestamp(),
+            "approval.reason": ""
+          });
+          await loadAdminLetters();
+          await loadMyLetters();
+        });
+      });
+
+      document.querySelectorAll(".btnReject").forEach(b=>{
+        b.addEventListener("click", async ()=>{
+          const id = b.dataset.id;
+          const reason = prompt("Alasan reject (opsional):") || "";
+          await updateDoc(doc(db, "letters", id), {
+            "approval.status": "rejected",
+            "approval.by": me.uid,
+            "approval.at": serverTimestamp(),
+            "approval.reason": reason
+          });
+          await loadAdminLetters();
+          await loadMyLetters();
+        });
+      });
+    };
+
+    // Preview button
+    document.getElementById("form").addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      hideAlert();
+      if (!me || !profile) return;
+
+      if (!neighborhoodId) return showAlert("neighborhoodId belum diatur. Isi dulu di Profil.");
+
+      const now = new Date();
+      const prefix = (org.value || "rt").toUpperCase();
+      const letterNo = fmtNo(prefix, now);
+
+      const d = {
+        type: type.value,
+        org: org.value,
+        neighborhoodId,
+        purpose: purpose.value.trim(),
+        note: note.value.trim(),
+        bizName: (bizName?.value || "").trim(),
+        letterNo,
+
+        // user identity snapshot
+        userName: profile.name || "—",
+        userNik: profile.nik || profile.NIK || "—",
+        userAddress: profile.address || profile.alamat || "—",
+        userPhone: profile.phone || "—",
+
+        createdBy: me.uid,
+        createdAt: new Date(), // for preview only
+        approval: { status: "pending" }
+      };
+
+      if (!d.purpose) return showAlert("Keperluan wajib diisi.");
+      if (d.type === "usaha" && !d.bizName) return showAlert("Nama usaha wajib diisi untuk surat usaha.");
+
+      applyPreview(d);
+    });
+
+    // Save to DB
+    btnSaveDb.addEventListener("click", async ()=>{
+      const d = window.__getDraft();
+      if (!d) return;
+
+      try{
+        btnSaveDb.disabled = true;
+        btnSaveDb.textContent = "Menyimpan…";
+
+        await addDoc(collection(db, "letters"), {
+          type: d.type,
+          org: d.org,
+          neighborhoodId: d.neighborhoodId,
+          purpose: d.purpose,
+          note: d.note || "",
+          bizName: d.bizName || "",
+          letterNo: d.letterNo,
+
+          userName: d.userName,
+          userNik: d.userNik,
+          userAddress: d.userAddress,
+          userPhone: d.userPhone,
+
+          createdBy: d.createdBy,
+          createdAt: serverTimestamp(),
+          approval: { status: "pending", by: "", at: null, reason: "" }
+        });
+
+        btnSaveDb.disabled = false;
+        btnSaveDb.textContent = "Simpan";
+        showAlert("Tersimpan ✓ (status: pending verifikasi)");
+        await loadMyLetters();
+        await loadAdminLetters();
+      }catch(err){
+        console.error(err);
+        btnSaveDb.disabled = false;
+        btnSaveDb.textContent = "Simpan";
+        showAlert("Gagal menyimpan. Cek Firestore Rules.");
+      }
+    });
+
+    // Reload all
+    window.__reloadAll = async ()=>{
+      await Promise.all([ loadMyLetters(), loadAdminLetters() ]);
+    };
+
+    // Guard
+    onAuthStateChanged(auth, async (user)=>{
+      if (!user) { go(ROUTES.login); return; }
+      me = user;
+
+      const usnap = await getDoc(doc(db, "users", user.uid));
+      if (!usnap.exists()) { go(ROUTES.register); return; }
+
+      profile = usnap.data();
+      neighborhoodId = profile.neighborhoodId || null;
+
+      subText.textContent = neighborhoodId
+        ? `Lingkungan: ${neighborhoodId} • Role: ${profile.role || "warga"}`
+        : `Role: ${profile.role || "warga"} (neighborhoodId belum diatur)`;
+
+      // default org (biar rapi)
+      const myOrg = roleOrg(profile.role || "");
+      org.value = myOrg || "rt";
+
+      // admin tab visibility
+      if (!isRtAdmin(profile.role || "")) {
+        // hide admin tab button
+        document.querySelectorAll(".tabBtn").forEach(b=>{ if (b.dataset.tab==="admin") b.classList.add("hidden"); });
+      }
+
+      await window.__reloadAll();
+    });
+  </script>
+</body>
+</html>
