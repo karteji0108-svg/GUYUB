@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="id" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>GUYUB | RT • PKK • Karang Taruna</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    body { font-family: "Plus Jakarta Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  </style>
+</head>
+
+<body class="h-full bg-slate-950 text-slate-100 overflow-hidden">
+  <!-- Background -->
+  <div class="fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-950 to-emerald-950/40"></div>
+    <div class="absolute -top-32 -right-24 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl"></div>
+    <div class="absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-sky-500/10 blur-3xl"></div>
+  </div>
+
+  <!-- Splash -->
+  <main class="h-full flex items-center justify-center px-6">
+    <div class="w-full max-w-sm">
+      <div class="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-7 shadow-2xl shadow-black/40">
+        <div class="flex items-center gap-4">
+          <!-- Logo placeholder -->
+          <div class="h-14 w-14 rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-500/20 to-sky-500/10 flex items-center justify-center">
+            <span class="text-xl font-extrabold">G</span>
+          </div>
+          <div>
+            <div class="text-lg font-extrabold tracking-tight">GUYUB</div>
+            <div class="text-xs text-slate-300/80">RT • PKK • Karang Taruna</div>
+          </div>
+        </div>
+
+        <div class="mt-6">
+          <div class="text-sm font-semibold">Memuat aplikasi…</div>
+          <div id="statusText" class="mt-1 text-xs text-slate-300/80">
+            Mengecek sesi & akses akun
+          </div>
+
+          <div class="mt-5 h-2 w-full overflow-hidden rounded-full bg-white/10">
+            <div id="bar" class="h-full w-1/3 rounded-full bg-white/40"></div>
+          </div>
+
+          <div id="hint" class="mt-4 text-[11px] text-slate-400">
+            Jika stuck lama, pastikan koneksi internet & konfigurasi Firebase sudah benar.
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 text-center text-[11px] text-slate-500">
+        © <span id="year"></span> GUYUB
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // tahun
+    document.getElementById("year").textContent = new Date().getFullYear();
+
+    // animasi bar (sekadar kosmetik)
+    const bar = document.getElementById("bar");
+    let w = 33;
+    const anim = setInterval(() => {
+      w = Math.min(92, w + Math.random() * 7);
+      bar.style.width = w + "%";
+    }, 450);
+
+    function setStatus(txt) {
+      document.getElementById("statusText").textContent = txt;
+    }
+
+    function go(path) {
+      clearInterval(anim);
+      bar.style.width = "100%";
+      window.location.replace(path);
+    }
+
+    // onboarding seen?
+    function onboardingSeen() {
+      return localStorage.getItem("guyub_onboarding_done") === "1";
+    }
+  </script>
+
+  <!-- Firebase (Modular v9) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    // ✅ GANTI INI dengan config Firebase kamu
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    // ---- ROUTE MAPPING (sesuaikan kalau nama file berbeda)
+    const ROUTES = {
+      onboarding: "/onboarding.html",
+      login: "/login.html",
+      register: "/register.html",
+      home: "/app/home.html",
+      adminRT: "/app/admin/rt.html",
+      adminPKK: "/app/admin/pkk.html",
+      adminKT: "/app/admin/kt.html",
+      superAdmin: "/app/admin/verifikasi.html"
+    };
+
+    function isConfigValid(cfg) {
+      // valid minimal: projectId + apiKey
+      return cfg && cfg.projectId && cfg.apiKey && !String(cfg.apiKey).includes("YOUR_");
+    }
+
+    function routeByRole(role) {
+      // role contoh:
+      // warga | rt_ketua | rt_sekretaris | rt_bendahara |
+      // pkk_ketua | pkk_sekretaris | pkk_bendahara | pkk_pokja |
+      // kt_ketua | kt_wakil | kt_sekretaris | kt_bendahara | kt_koor_sie |
+      // super_admin
+
+      if (!role) return ROUTES.home;
+
+      if (role === "super_admin") return ROUTES.superAdmin;
+      if (role.startsWith("rt_")) return ROUTES.adminRT;
+      if (role.startsWith("pkk_")) return ROUTES.adminPKK;
+      if (role.startsWith("kt_")) return ROUTES.adminKT;
+
+      return ROUTES.home; // warga & default
+    }
+
+    try {
+      setStatus("Menyiapkan koneksi…");
+
+      if (!isConfigValid(firebaseConfig)) {
+        setStatus("Firebase belum dikonfigurasi (cek firebaseConfig).");
+        // tetap arahkan ke onboarding agar bisa lihat UI dulu
+        setTimeout(() => {
+          if (!onboardingSeen()) go(ROUTES.onboarding);
+          else go(ROUTES.login);
+        }, 900);
+        throw new Error("Firebase config invalid");
+      }
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+
+      setStatus("Mengecek sesi login…");
+
+      onAuthStateChanged(auth, async (user) => {
+        try {
+          if (!user) {
+            setStatus("Belum login.");
+            // kalau belum pernah onboarding -> onboarding, else -> login
+            setTimeout(() => {
+              if (!onboardingSeen()) go(ROUTES.onboarding);
+              else go(ROUTES.login);
+            }, 450);
+            return;
+          }
+
+          setStatus("Mengambil profil & role…");
+
+          const uref = doc(db, "users", user.uid);
+          const usnap = await getDoc(uref);
+
+          if (!usnap.exists()) {
+            setStatus("Profil belum lengkap. Mengarah ke pendaftaran…");
+            setTimeout(() => go(ROUTES.register), 450);
+            return;
+          }
+
+          const u = usnap.data();
+
+          // kalau status pending, tetap arahkan ke home (bisa tampilkan banner "menunggu verifikasi")
+          // atau arahkan ke home yang read-only
+          const role = u.role || "warga";
+          const status = u.status || "active";
+
+          if (status === "suspended") {
+            // kalau akun disuspend, arahkan ke login (atau halaman khusus)
+            setStatus("Akun dinonaktifkan. Silakan hubungi pengurus.");
+            setTimeout(() => go(ROUTES.login), 800);
+            return;
+          }
+
+          const target = routeByRole(role);
+          setStatus(`Masuk sebagai: ${role.replaceAll("_"," ")}`);
+          setTimeout(() => go(target), 400);
+
+        } catch (err) {
+          console.error(err);
+          setStatus("Terjadi kendala saat memuat profil. Mengarah ke login…");
+          setTimeout(() => go(ROUTES.login), 900);
+        }
+      });
+
+    } catch (e) {
+      console.error(e);
+    }
+  </script>
+</body>
+</html>
