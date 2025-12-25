@@ -59,7 +59,6 @@
             Masuk
           </button>
 
-          <!-- Divider -->
           <div class="flex items-center gap-3 py-2">
             <div class="h-px flex-1 bg-white/10"></div>
             <div class="text-[11px] text-slate-400">atau</div>
@@ -104,19 +103,46 @@
       btnGoogle.disabled = isLoading;
       btnLogin.textContent = isLoading ? "Memproses…" : "Masuk";
     }
+
+    // expose untuk module
+    window.__GUYUB_LOGIN__ = { showAlert, clearAlert, setLoading, emailEl, passEl };
   </script>
 
-  <!-- App Login Logic -->
   <script type="module">
-    import { initFirebase, ROUTES, routeByRole } from "/assets/js/firebase.js";
-    import {
+    const { showAlert, clearAlert, setLoading, emailEl, passEl } = window.__GUYUB_LOGIN__;
+
+    // timeout helper biar tidak ngantung di getDoc
+    const withTimeout = (p, ms = 7000, label = "timeout") =>
+      Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error(label)), ms))]);
+
+    // 1) dynamic import core (anti 404 / rewrite)
+    let core;
+    try {
+      core = await import("/assets/js/firebase.js");
+    } catch (e) {
+      console.error("[GUYUB] gagal import /assets/js/firebase.js:", e);
+      const msg = String(e?.message || "");
+      if (msg.includes("Unexpected token") || msg.includes("<")) {
+        showAlert("Core JS kena rewrite (balik HTML). Perbaiki vercel.json / rewrites.");
+      } else {
+        showAlert("Gagal memuat core (/assets/js/firebase.js). Cek path/404.");
+      }
+      setLoading(false);
+      throw e;
+    }
+
+    const { initFirebase, ROUTES, routeByRole } = core;
+
+    // 2) import auth/firestore
+    const {
       onAuthStateChanged,
       signInWithEmailAndPassword,
       GoogleAuthProvider,
       signInWithPopup,
       sendPasswordResetEmail
-    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    } = await import("https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js");
+
+    const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js");
 
     const { auth, db } = initFirebase();
 
@@ -124,23 +150,43 @@
       window.location.replace(path);
     }
 
+    function humanProfileError(err) {
+      const msg = String(err?.message || "");
+      if (msg.includes("Missing or insufficient permissions")) {
+        return "Gagal baca profil (Firestore Rules menolak).";
+      }
+      if (msg.toLowerCase().includes("timeout")) {
+        return "Timeout saat ambil profil. Cek koneksi internet.";
+      }
+      return "Gagal memuat profil. Cek koneksi / rules.";
+    }
+
     async function redirectAfterLogin(uid) {
-      const usnap = await getDoc(doc(db, "users", uid));
-      if (!usnap.exists()) {
-        go(ROUTES.register);
+      // guard routeByRole agar selalu string valid
+      const snap = await withTimeout(getDoc(doc(db, "users", uid)), 7000, "getDoc users timeout");
+
+      if (!snap.exists()) {
+        showAlert("Profil belum lengkap. Mengarah ke daftar…");
+        setTimeout(() => go(ROUTES.register), 400);
         return;
       }
 
-      const u = usnap.data();
-      if ((u.status || "active") === "suspended") {
-        throw new Error("Akun dinonaktifkan. Hubungi pengurus.");
+      const u = snap.data();
+      const status = u.status || "active";
+      const role = u.role || "warga";
+
+      if (status === "suspended") {
+        showAlert("Akun dinonaktifkan. Hubungi pengurus.");
+        setLoading(false);
+        return;
       }
 
-      // redirect sesuai role
-      go(routeByRole(u.role || "warga"));
+      const target = routeByRole(role) || ROUTES.home;
+      console.log("[GUYUB] redirect =>", target, "role:", role);
+      go(target);
     }
 
-    // Kalau sudah login, langsung redirect
+    // kalau sudah login, auto redirect
     onAuthStateChanged(auth, async (user) => {
       if (!user) return;
       try {
@@ -148,8 +194,9 @@
         clearAlert();
         await redirectAfterLogin(user.uid);
       } catch (e) {
+        console.error("[GUYUB] redirectAfterLogin error:", e);
+        showAlert(humanProfileError(e));
         setLoading(false);
-        showAlert(e.message || "Gagal memuat profil.");
       }
     });
 
@@ -168,11 +215,14 @@
       } catch (err) {
         console.error(err);
         setLoading(false);
+
+        // bedakan error auth vs error firestore
+        const code = err?.code || "";
         let msg = "Login gagal. Cek email & password.";
-        if (err.code === "auth/user-not-found") msg = "Akun tidak ditemukan. Silakan daftar dulu.";
-        if (err.code === "auth/wrong-password") msg = "Password salah.";
-        if (err.code === "auth/invalid-email") msg = "Format email tidak valid.";
-        if (err.code === "auth/too-many-requests") msg = "Terlalu banyak percobaan. Coba lagi nanti.";
+        if (code === "auth/user-not-found") msg = "Akun tidak ditemukan. Silakan daftar dulu.";
+        if (code === "auth/wrong-password") msg = "Password salah.";
+        if (code === "auth/invalid-email") msg = "Format email tidak valid.";
+        if (code === "auth/too-many-requests") msg = "Terlalu banyak percobaan. Coba lagi nanti.";
         showAlert(msg);
       }
     });
@@ -188,7 +238,7 @@
       } catch (err) {
         console.error(err);
         setLoading(false);
-        showAlert("Login Google gagal. Pastikan pop-up tidak diblokir & Google Sign-In diaktifkan di Firebase Auth.");
+        showAlert("Login Google gagal. Pastikan pop-up tidak diblokir & Google Sign-In aktif di Firebase Auth.");
       }
     });
 
@@ -196,10 +246,8 @@
     document.getElementById("btnReset").addEventListener("click", async () => {
       clearAlert();
       const email = emailEl.value.trim();
-      if (!email) {
-        showAlert("Isi email dulu untuk reset password.");
-        return;
-      }
+      if (!email) return showAlert("Isi email dulu untuk reset password.");
+
       try {
         setLoading(true);
         await sendPasswordResetEmail(auth, email);
