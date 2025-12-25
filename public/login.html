@@ -14,7 +14,6 @@
 </head>
 
 <body class="h-full bg-slate-950 text-slate-100 overflow-hidden">
-  <!-- Background -->
   <div class="fixed inset-0 -z-10">
     <div class="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-950 to-emerald-950/40"></div>
     <div class="absolute -top-32 -right-24 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl"></div>
@@ -103,103 +102,82 @@
       btnGoogle.disabled = isLoading;
       btnLogin.textContent = isLoading ? "Memproses…" : "Masuk";
     }
-
-    // expose untuk module
-    window.__GUYUB_LOGIN__ = { showAlert, clearAlert, setLoading, emailEl, passEl };
   </script>
 
   <script type="module">
-    const { showAlert, clearAlert, setLoading, emailEl, passEl } = window.__GUYUB_LOGIN__;
-
-    // timeout helper biar tidak ngantung di getDoc
-    const withTimeout = (p, ms = 7000, label = "timeout") =>
-      Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error(label)), ms))]);
-
-    // 1) dynamic import core (anti 404 / rewrite)
-    let core;
-    try {
-      core = await import("/assets/js/firebase.js");
-    } catch (e) {
-      console.error("[GUYUB] gagal import /assets/js/firebase.js:", e);
-      const msg = String(e?.message || "");
-      if (msg.includes("Unexpected token") || msg.includes("<")) {
-        showAlert("Core JS kena rewrite (balik HTML). Perbaiki vercel.json / rewrites.");
-      } else {
-        showAlert("Gagal memuat core (/assets/js/firebase.js). Cek path/404.");
-      }
-      setLoading(false);
-      throw e;
-    }
-
-    const { initFirebase, ROUTES, routeByRole } = core;
-
-    // 2) import auth/firestore
-    const {
+    import { initFirebase, ROUTES, routeByRole } from "/assets/js/firebase.js";
+    import {
       onAuthStateChanged,
       signInWithEmailAndPassword,
       GoogleAuthProvider,
       signInWithPopup,
       sendPasswordResetEmail
-    } = await import("https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js");
-
-    const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js");
+    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
     const { auth, db } = initFirebase();
 
-    function go(path) {
-      window.location.replace(path);
-    }
+    // Fallback URL jika routeByRole gagal
+    const DEFAULT_HOME = "/app/home.html";
 
-    function humanProfileError(err) {
-      const msg = String(err?.message || "");
-      if (msg.includes("Missing or insufficient permissions")) {
-        return "Gagal baca profil (Firestore Rules menolak).";
-      }
-      if (msg.toLowerCase().includes("timeout")) {
-        return "Timeout saat ambil profil. Cek koneksi internet.";
-      }
-      return "Gagal memuat profil. Cek koneksi / rules.";
+    function go(path) {
+      // Jika path kosong/undefined, gunakan default home
+      const target = path || DEFAULT_HOME;
+      console.log("Redirecting to:", target);
+      window.location.replace(target);
     }
 
     async function redirectAfterLogin(uid) {
-      // guard routeByRole agar selalu string valid
-      const snap = await withTimeout(getDoc(doc(db, "users", uid)), 7000, "getDoc users timeout");
+      try {
+        const usnap = await getDoc(doc(db, "users", uid));
+        
+        // 1. Jika data user belum ada di Firestore -> ke Register
+        if (!usnap.exists()) {
+          console.warn("User auth sukses, tapi data Firestore tidak ditemukan.");
+          go("/register.html");
+          return;
+        }
 
-      if (!snap.exists()) {
-        showAlert("Profil belum lengkap. Mengarah ke daftar…");
-        setTimeout(() => go(ROUTES.register), 400);
-        return;
-      }
+        const u = usnap.data();
 
-      const u = snap.data();
-      const status = u.status || "active";
-      const role = u.role || "warga";
+        // 2. Cek status akun
+        if ((u.status || "active") === "suspended") {
+          throw new Error("Akun dinonaktifkan. Hubungi pengurus.");
+        }
 
-      if (status === "suspended") {
-        showAlert("Akun dinonaktifkan. Hubungi pengurus.");
+        // 3. Tentukan tujuan berdasarkan Role
+        // Gunakan fallback ke DEFAULT_HOME jika routeByRole error/undefined
+        let targetRoute = DEFAULT_HOME;
+        if (typeof routeByRole === 'function') {
+           const route = routeByRole(u.role || "warga");
+           if (route) targetRoute = route;
+        }
+        
+        go(targetRoute);
+
+      } catch (error) {
+        console.error("Redirect Error:", error);
         setLoading(false);
-        return;
+        showAlert(error.message || "Gagal memuat profil user.");
       }
-
-      const target = routeByRole(role) || ROUTES.home;
-      console.log("[GUYUB] redirect =>", target, "role:", role);
-      go(target);
     }
 
-    // kalau sudah login, auto redirect
+    // --- MAIN LISTENER (Single Source of Truth) ---
+    // Logika redirect hanya dipanggil dari sini agar tidak bentrok
     onAuthStateChanged(auth, async (user) => {
-      if (!user) return;
-      try {
+      if (user) {
+        // User login (atau refresh saat sudah login)
         setLoading(true);
         clearAlert();
         await redirectAfterLogin(user.uid);
-      } catch (e) {
-        console.error("[GUYUB] redirectAfterLogin error:", e);
-        showAlert(humanProfileError(e));
+      } else {
+        // User belum login / logout
         setLoading(false);
       }
     });
 
+    // --- BUTTON HANDLERS ---
+    
     // Email/password login
     document.getElementById("loginForm").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -210,19 +188,16 @@
 
       try {
         setLoading(true);
-        const cred = await signInWithEmailAndPassword(auth, email, password);
-        await redirectAfterLogin(cred.user.uid);
+        // HANYA melakukan login. Redirect ditangani onAuthStateChanged.
+        await signInWithEmailAndPassword(auth, email, password);
       } catch (err) {
         console.error(err);
-        setLoading(false);
-
-        // bedakan error auth vs error firestore
-        const code = err?.code || "";
+        setLoading(false); // Matikan loading jika error
         let msg = "Login gagal. Cek email & password.";
-        if (code === "auth/user-not-found") msg = "Akun tidak ditemukan. Silakan daftar dulu.";
-        if (code === "auth/wrong-password") msg = "Password salah.";
-        if (code === "auth/invalid-email") msg = "Format email tidak valid.";
-        if (code === "auth/too-many-requests") msg = "Terlalu banyak percobaan. Coba lagi nanti.";
+        if (err.code === "auth/user-not-found") msg = "Akun belum terdaftar.";
+        if (err.code === "auth/wrong-password") msg = "Password salah.";
+        if (err.code === "auth/invalid-email") msg = "Format email salah.";
+        if (err.code === "auth/too-many-requests") msg = "Terlalu banyak percobaan. Tunggu sebentar.";
         showAlert(msg);
       }
     });
@@ -233,12 +208,12 @@
       try {
         setLoading(true);
         const provider = new GoogleAuthProvider();
-        const cred = await signInWithPopup(auth, provider);
-        await redirectAfterLogin(cred.user.uid);
+        // HANYA melakukan login. Redirect ditangani onAuthStateChanged.
+        await signInWithPopup(auth, provider);
       } catch (err) {
         console.error(err);
         setLoading(false);
-        showAlert("Login Google gagal. Pastikan pop-up tidak diblokir & Google Sign-In aktif di Firebase Auth.");
+        showAlert("Login Google dibatalkan atau gagal.");
       }
     });
 
@@ -246,17 +221,19 @@
     document.getElementById("btnReset").addEventListener("click", async () => {
       clearAlert();
       const email = emailEl.value.trim();
-      if (!email) return showAlert("Isi email dulu untuk reset password.");
-
+      if (!email) {
+        showAlert("Isi email dulu untuk reset password.");
+        return;
+      }
       try {
         setLoading(true);
         await sendPasswordResetEmail(auth, email);
         setLoading(false);
-        showAlert("Link reset password sudah dikirim ke email kamu.");
+        showAlert("Cek email kamu (inbox/spam) untuk link reset password.");
       } catch (err) {
         console.error(err);
         setLoading(false);
-        showAlert("Gagal kirim reset. Pastikan email benar & fitur reset aktif.");
+        showAlert("Gagal kirim reset. Pastikan email benar.");
       }
     });
   </script>
