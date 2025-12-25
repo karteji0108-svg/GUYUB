@@ -14,7 +14,6 @@
 </head>
 
 <body class="h-full bg-slate-950 text-slate-100 overflow-y-auto">
-  <!-- Background -->
   <div class="fixed inset-0 -z-10">
     <div class="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-950 to-emerald-950/40"></div>
     <div class="absolute -top-32 -right-24 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl"></div>
@@ -202,11 +201,10 @@
       requestBox.classList.toggle("hidden", !toggleRequest.checked);
     });
 
-    // expose
+    // expose utils to window for module
     window.__GUYUB_REG__ = { showAlert, clearAlert, setLoading };
   </script>
 
-  <!-- Register Logic -->
   <script type="module">
     import { initFirebase, ROUTES, routeByRole } from "/assets/js/firebase.js";
     import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
@@ -225,8 +223,12 @@
     const { showAlert, clearAlert, setLoading } = window.__GUYUB_REG__;
     const { auth, db } = initFirebase();
 
+    const DEFAULT_HOME = "/app/home.html";
+
     function go(path) {
-      window.location.replace(path);
+      const target = path || DEFAULT_HOME;
+      console.log("Redirecting to:", target);
+      window.location.replace(target);
     }
 
     function cleanPhone(v) {
@@ -237,10 +239,18 @@
     }
 
     async function isFirstSuperAdmin() {
-      // cek apakah sudah ada super_admin
-      const q = query(collection(db, "users"), where("role", "==", "super_admin"), limit(1));
-      const snap = await getDocs(q);
-      return snap.empty;
+      // Cek apakah sudah ada super_admin di DB
+      // Gunakan try-catch agar jika permission error (karena rules), dianggap false
+      try {
+        const q = query(collection(db, "users"), where("role", "==", "super_admin"), limit(1));
+        const snap = await getDocs(q);
+        return snap.empty;
+      } catch (err) {
+        // Jika error (misal karena rules melarang read sebelum punya role),
+        // asumsikan bukan first admin (aman).
+        console.warn("Cek super admin skip:", err.message);
+        return false;
+      }
     }
 
     document.getElementById("registerForm").addEventListener("submit", async (e) => {
@@ -271,41 +281,40 @@
       try {
         setLoading(true);
 
-        // 0) cek apakah ini pendaftar pertama (belum ada super_admin)
-        const firstAdmin = await isFirstSuperAdmin();
-
-        // 1) Create auth user
+        // 1. Create User di Authentication
+        // (Login otomatis terjadi setelah ini sukses)
         const cred = await createUserWithEmailAndPassword(auth, email, pass1);
         const uid = cred.user.uid;
 
-        // 2) Tentukan role final saat create user doc:
-        // - kalau user pertama -> super_admin (langsung aktif)
-        // - kalau bukan -> warga (atau pending_verification jika mengajukan)
+        // 2. Cek Super Admin
+        // Dilakukan SETELAH create user agar punya akses baca (jika Firestore Rules mengizinkan auth users)
+        const firstAdmin = await isFirstSuperAdmin();
+
+        // 3. Tentukan Role
+        // - Jika firstAdmin -> super_admin (langsung active)
+        // - Jika tidak -> warga (atau pending_verification jika mengajukan pengurus)
         const role = firstAdmin ? "super_admin" : "warga";
-        const status =
-          firstAdmin ? "active"
-          : (isRequesting ? "pending_verification" : "active");
+        const status = firstAdmin ? "active" : (isRequesting ? "pending_verification" : "active");
 
         const userDoc = {
           uid,
           name,
           email,
           phone: phone || "",
-          neighborhoodId, // boleh null dulu
+          neighborhoodId,
           role,
           status,
           address: { rt: rt || "", rw: rw || "", detail: addressDetail || "" },
-
-          // audit
           verifiedBy: firstAdmin ? uid : null,
           verifiedAt: firstAdmin ? serverTimestamp() : null,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         };
 
+        // 4. Simpan ke Firestore
         await setDoc(doc(db, "users", uid), userDoc, { merge: true });
 
-        // 3) Jika ajukan role (HANYA jika bukan super_admin pertama)
+        // 5. Simpan Request Role (jika ada dan bukan admin pertama)
         if (!firstAdmin && isRequesting) {
           await addDoc(collection(db, "role_requests"), {
             neighborhoodId,
@@ -319,11 +328,15 @@
           });
         }
 
-        // 4) Mark onboarding done
+        // 6. Tanda Onboarding Selesai & Redirect
         localStorage.setItem("guyub_onboarding_done", "1");
-
-        // 5) Redirect sesuai role
-        go(routeByRole(role));
+        
+        let targetRoute = DEFAULT_HOME;
+        if (typeof routeByRole === 'function') {
+           const r = routeByRole(role);
+           if (r) targetRoute = r;
+        }
+        go(targetRoute);
 
       } catch (err) {
         console.error(err);
@@ -332,7 +345,7 @@
         let msg = "Gagal daftar. Coba lagi.";
         if (err.code === "auth/email-already-in-use") msg = "Email sudah terdaftar. Silakan login.";
         if (err.code === "auth/invalid-email") msg = "Format email tidak valid.";
-        if (err.code === "auth/weak-password") msg = "Password terlalu lemah (minimal 6 karakter).";
+        if (err.code === "auth/weak-password") msg = "Password terlalu lemah.";
         showAlert(msg);
       }
     });
