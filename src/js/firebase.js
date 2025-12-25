@@ -19,6 +19,12 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 /* =================================================
+   0. DEBUG
+   ================================================= */
+const DEBUG = true;
+const log = (...a) => DEBUG && console.log("[GUYUB]", ...a);
+
+/* =================================================
    1. FIREBASE CONFIG (GUYUB – VALID)
    ================================================= */
 export const firebaseConfig = {
@@ -59,12 +65,10 @@ let db;
 
 export function initFirebase() {
   if (!app) {
-    app = getApps().length
-      ? getApps()[0]
-      : initializeApp(firebaseConfig);
-
+    app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
+    log("Firebase inited", { projectId: firebaseConfig.projectId });
   }
   return { app, auth, db };
 }
@@ -101,13 +105,37 @@ export const isRtAdmin = (role = "") =>
   role === "super_admin" || role.startsWith("rt_");
 
 /* =================================================
-   5. USER PROFILE HELPERS
+   5. SAFE HELPERS (ANTI STUCK)
+   ================================================= */
+function withTimeout(promise, ms = 7000, label = "timeout") {
+  return Promise.race([
+    promise,
+    new Promise((_, rej) => setTimeout(() => rej(new Error(label)), ms)),
+  ]);
+}
+
+export function humanFirestoreError(e) {
+  const msg = String(e?.message || "");
+  if (msg.includes("Missing or insufficient permissions")) {
+    return "Akses ditolak (Firestore Rules).";
+  }
+  if (msg.toLowerCase().includes("timeout")) return "Request timeout. Cek koneksi.";
+  return "Gagal memuat data. Cek koneksi / konfigurasi.";
+}
+
+/* =================================================
+   6. USER PROFILE HELPERS
    Collection: users/{uid}
    ================================================= */
 export async function getUserProfile(uid) {
-  const db = getDbRef();
-  const snap = await getDoc(doc(db, "users", uid));
-  return snap.exists() ? { uid: snap.id, ...snap.data() } : null;
+  try {
+    const db = getDbRef();
+    const snap = await withTimeout(getDoc(doc(db, "users", uid)), 7000, "getUserProfile timeout");
+    return snap.exists() ? { uid: snap.id, ...snap.data() } : null;
+  } catch (e) {
+    log("getUserProfile error:", e);
+    throw e;
+  }
 }
 
 export async function getCurrentUserProfile() {
@@ -120,31 +148,68 @@ export async function getCurrentUserProfile() {
 }
 
 /* =================================================
-   6. AUTH GUARDS
+   7. AUTH GUARDS (ANTI STUCK)
    ================================================= */
 export function requireAuth({
   loginPath = ROUTES.login,
   registerPath = ROUTES.register,
-  onReady = () => {}
+  onReady = () => {},
+  onError = () => {},
 } = {}) {
 
   const auth = getAuthRef();
 
   return new Promise((resolve) => {
+    let settled = false;
+
+    // watchdog kalau callback auth gak pernah terpanggil (jarang, tapi aman)
+    const watchdog = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      log("requireAuth watchdog fired");
+      onError(new Error("auth watchdog"));
+      go(loginPath);
+      resolve(null);
+    }, 9000);
+
     onAuthStateChanged(auth, async (user) => {
-      if (!user) {
+      try {
+        clearTimeout(watchdog);
+        if (settled) return;
+        settled = true;
+
+        log("auth state:", user ? "LOGGED_IN" : "LOGGED_OUT", user?.uid);
+
+        if (!user) {
+          go(loginPath);
+          return resolve(null);
+        }
+
+        let profile = null;
+        try {
+          profile = await getUserProfile(user.uid);
+        } catch (e) {
+          // Firestore error → jangan stuck, fallback ke login
+          onError(e);
+          go(loginPath);
+          return resolve(null);
+        }
+
+        if (!profile) {
+          go(registerPath);
+          return resolve(null);
+        }
+
+        onReady({ user, profile });
+        resolve({ user, profile });
+
+      } catch (e) {
+        clearTimeout(watchdog);
+        log("requireAuth fatal:", e);
+        onError(e);
         go(loginPath);
-        return resolve(null);
+        resolve(null);
       }
-
-      const profile = await getUserProfile(user.uid);
-      if (!profile) {
-        go(registerPath);
-        return resolve(null);
-      }
-
-      onReady({ user, profile });
-      resolve({ user, profile });
     });
   });
 }
@@ -162,7 +227,7 @@ export async function requireRole(predicate, options = {}) {
 }
 
 /* =================================================
-   7. ROLE-BASED REDIRECT
+   8. ROLE-BASED REDIRECT
    ================================================= */
 export function routeByRole(role = "") {
   if (role === "super_admin") return ROUTES.verifikasi;
@@ -173,7 +238,7 @@ export function routeByRole(role = "") {
 }
 
 /* =================================================
-   8. SESSION
+   9. SESSION
    ================================================= */
 export async function logout(redirect = ROUTES.login) {
   const auth = getAuthRef();
@@ -182,22 +247,38 @@ export async function logout(redirect = ROUTES.login) {
 }
 
 /* =================================================
-   9. FIRESTORE UTILITIES
+   10. FIRESTORE UTILITIES
    ================================================= */
 export const ts = () => serverTimestamp();
 export const inc = (n) => increment(Number(n || 0));
 
+/**
+ * upsertUserProfile:
+ * - createdAt hanya di-set kalau doc belum ada
+ * - update berikutnya tidak menimpa createdAt
+ */
 export async function upsertUserProfile(uid, data) {
   const db = getDbRef();
-  await setDoc(
-    doc(db, "users", uid),
-    {
+  const ref = doc(db, "users", uid);
+
+  // cek ada doc atau belum (biar createdAt tidak ketimpa)
+  const snap = await getDoc(ref);
+  const exists = snap.exists();
+
+  if (!exists) {
+    await setDoc(ref, {
       ...data,
       createdAt: ts(),
       updatedAt: ts(),
-    },
-    { merge: true }
-  );
+    }, { merge: true });
+    return;
+  }
+
+  // kalau sudah ada, jangan overwrite createdAt
+  await setDoc(ref, {
+    ...data,
+    updatedAt: ts(),
+  }, { merge: true });
 }
 
 export async function patchUserProfile(uid, patch) {
