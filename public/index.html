@@ -65,7 +65,7 @@
     // tahun
     document.getElementById("year").textContent = new Date().getFullYear();
 
-    // animasi bar (sekadar kosmetik)
+    // animasi bar (kosmetik)
     const bar = document.getElementById("bar");
     let w = 33;
     const anim = setInterval(() => {
@@ -83,78 +83,43 @@
       window.location.replace(path);
     }
 
-    // onboarding seen?
     function onboardingSeen() {
       return localStorage.getItem("guyub_onboarding_done") === "1";
     }
+
+    // expose ke module
+    window.__GUYUB_SPLASH__ = { setStatus, go, onboardingSeen };
   </script>
 
-  <!-- Firebase (Modular v9) -->
+  <!-- App bootstrap -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    import { initFirebase, ROUTES, routeByRole } from "/assets/js/firebase.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-    // ✅ GANTI INI dengan config Firebase kamu
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_STORAGE_BUCKET",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
+    const { setStatus, go, onboardingSeen } = window.__GUYUB_SPLASH__;
 
-    // ---- ROUTE MAPPING (sesuaikan kalau nama file berbeda)
-    const ROUTES = {
-      onboarding: "/onboarding.html",
-      login: "/login.html",
-      register: "/register.html",
-      home: "/app/home.html",
+    // ROUTE tambahan (khusus halaman admin RT/PKK/KT kalau kamu memang pakai file itu)
+    // Kalau kamu belum punya rt.html/pkk.html/kt.html, biarkan routeByRole() dari firebase.js yg mengarah ke home/verifikasi/kasAdmin.
+    const ROUTE_OVERRIDE = {
       adminRT: "/app/admin/rt.html",
       adminPKK: "/app/admin/pkk.html",
       adminKT: "/app/admin/kt.html",
-      superAdmin: "/app/admin/verifikasi.html"
     };
 
-    function isConfigValid(cfg) {
-      // valid minimal: projectId + apiKey
-      return cfg && cfg.projectId && cfg.apiKey && !String(cfg.apiKey).includes("YOUR_");
-    }
-
-    function routeByRole(role) {
-      // role contoh:
-      // warga | rt_ketua | rt_sekretaris | rt_bendahara |
-      // pkk_ketua | pkk_sekretaris | pkk_bendahara | pkk_pokja |
-      // kt_ketua | kt_wakil | kt_sekretaris | kt_bendahara | kt_koor_sie |
-      // super_admin
-
-      if (!role) return ROUTES.home;
-
-      if (role === "super_admin") return ROUTES.superAdmin;
-      if (role.startsWith("rt_")) return ROUTES.adminRT;
-      if (role.startsWith("pkk_")) return ROUTES.adminPKK;
-      if (role.startsWith("kt_")) return ROUTES.adminKT;
-
-      return ROUTES.home; // warga & default
+    // Optional: override sederhana jika file admin org ada
+    function routeByRoleOverride(role) {
+      if (role === "super_admin") return ROUTES.verifikasi;
+      if (role?.startsWith("rt_")) return ROUTE_OVERRIDE.adminRT || ROUTES.kasAdmin;
+      if (role?.startsWith("pkk_")) return ROUTE_OVERRIDE.adminPKK || ROUTES.home;
+      if (role?.startsWith("kt_")) return ROUTE_OVERRIDE.adminKT || ROUTES.home;
+      return ROUTES.home;
     }
 
     try {
       setStatus("Menyiapkan koneksi…");
 
-      if (!isConfigValid(firebaseConfig)) {
-        setStatus("Firebase belum dikonfigurasi (cek firebaseConfig).");
-        // tetap arahkan ke onboarding agar bisa lihat UI dulu
-        setTimeout(() => {
-          if (!onboardingSeen()) go(ROUTES.onboarding);
-          else go(ROUTES.login);
-        }, 900);
-        throw new Error("Firebase config invalid");
-      }
-
-      const app = initializeApp(firebaseConfig);
-      const auth = getAuth(app);
-      const db = getFirestore(app);
+      const { auth, db } = initFirebase();
 
       setStatus("Mengecek sesi login…");
 
@@ -162,7 +127,6 @@
         try {
           if (!user) {
             setStatus("Belum login.");
-            // kalau belum pernah onboarding -> onboarding, else -> login
             setTimeout(() => {
               if (!onboardingSeen()) go(ROUTES.onboarding);
               else go(ROUTES.login);
@@ -182,21 +146,20 @@
           }
 
           const u = usnap.data();
-
-          // kalau status pending, tetap arahkan ke home (bisa tampilkan banner "menunggu verifikasi")
-          // atau arahkan ke home yang read-only
           const role = u.role || "warga";
           const status = u.status || "active";
 
           if (status === "suspended") {
-            // kalau akun disuspend, arahkan ke login (atau halaman khusus)
             setStatus("Akun dinonaktifkan. Silakan hubungi pengurus.");
             setTimeout(() => go(ROUTES.login), 800);
             return;
           }
 
-          const target = routeByRole(role);
-          setStatus(`Masuk sebagai: ${role.replaceAll("_"," ")}`);
+          // pilih salah satu:
+          // const target = routeByRole(role);          // pakai mapping di firebase.js
+          const target = routeByRoleOverride(role);    // pakai mapping override (rt/pkk/kt html)
+
+          setStatus(`Masuk sebagai: ${String(role).replaceAll("_"," ")}`);
           setTimeout(() => go(target), 400);
 
         } catch (err) {
@@ -208,6 +171,11 @@
 
     } catch (e) {
       console.error(e);
+      setStatus("Koneksi aplikasi gagal. Mengarah ke onboarding…");
+      setTimeout(() => {
+        if (!window.__GUYUB_SPLASH__.onboardingSeen()) window.__GUYUB_SPLASH__.go(ROUTES.onboarding);
+        else window.__GUYUB_SPLASH__.go(ROUTES.login);
+      }, 900);
     }
   </script>
 </body>
