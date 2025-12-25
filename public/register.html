@@ -40,7 +40,6 @@
         <div id="alert" class="hidden mt-5 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-slate-200"></div>
 
         <form id="registerForm" class="mt-6 space-y-4">
-          <!-- Nama -->
           <div>
             <label class="text-xs font-semibold text-slate-300">Nama lengkap</label>
             <input id="name" type="text" required
@@ -48,7 +47,6 @@
               placeholder="Nama kamu" />
           </div>
 
-          <!-- Email -->
           <div>
             <label class="text-xs font-semibold text-slate-300">Email</label>
             <input id="email" type="email" autocomplete="email" required
@@ -56,7 +54,6 @@
               placeholder="nama@email.com" />
           </div>
 
-          <!-- Phone (opsional, tapi disimpan di profile) -->
           <div>
             <label class="text-xs font-semibold text-slate-300">No. HP (opsional)</label>
             <input id="phone" type="tel" inputmode="tel"
@@ -64,7 +61,6 @@
               placeholder="+62…" />
           </div>
 
-          <!-- Alamat ringkas -->
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="text-xs font-semibold text-slate-300">RT</label>
@@ -80,7 +76,6 @@
             </div>
           </div>
 
-          <!-- Detail alamat -->
           <div>
             <label class="text-xs font-semibold text-slate-300">Alamat detail (opsional)</label>
             <input id="addressDetail" type="text"
@@ -88,7 +83,6 @@
               placeholder="Jl..., No..., Patokan..." />
           </div>
 
-          <!-- Neighborhood ID (opsional tapi bagus) -->
           <div>
             <label class="text-xs font-semibold text-slate-300">Kode Lingkungan (opsional)</label>
             <input id="neighborhoodId" type="text"
@@ -99,7 +93,6 @@
             </p>
           </div>
 
-          <!-- Password -->
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="text-xs font-semibold text-slate-300">Password</label>
@@ -115,7 +108,6 @@
             </div>
           </div>
 
-          <!-- Ajukan role pengurus -->
           <div class="mt-2 rounded-2xl border border-white/10 bg-white/5 p-4">
             <div class="flex items-start justify-between gap-3">
               <div>
@@ -209,33 +201,29 @@
     toggleRequest.addEventListener("change", () => {
       requestBox.classList.toggle("hidden", !toggleRequest.checked);
     });
+
+    // expose
+    window.__GUYUB_REG__ = { showAlert, clearAlert, setLoading };
   </script>
 
-  <!-- Firebase -->
+  <!-- Register Logic -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-    import { getFirestore, doc, setDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    import { initFirebase, ROUTES, routeByRole } from "/assets/js/firebase.js";
+    import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import {
+      doc,
+      setDoc,
+      collection,
+      addDoc,
+      serverTimestamp,
+      query,
+      where,
+      limit,
+      getDocs
+    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-    // ✅ GANTI sesuai Firebase kamu
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_STORAGE_BUCKET",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
-
-    // ✅ Sesuaikan jika nama file berbeda
-    const ROUTES = {
-      home: "/app/home.html",
-      login: "/login.html"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    const { showAlert, clearAlert, setLoading } = window.__GUYUB_REG__;
+    const { auth, db } = initFirebase();
 
     function go(path) {
       window.location.replace(path);
@@ -244,9 +232,15 @@
     function cleanPhone(v) {
       const s = (v || "").trim();
       if (!s) return "";
-      // normalize sederhana: kalau mulai 08 -> +62
       if (s.startsWith("08")) return "+62" + s.slice(1);
       return s;
+    }
+
+    async function isFirstSuperAdmin() {
+      // cek apakah sudah ada super_admin
+      const q = query(collection(db, "users"), where("role", "==", "super_admin"), limit(1));
+      const snap = await getDocs(q);
+      return snap.empty;
     }
 
     document.getElementById("registerForm").addEventListener("submit", async (e) => {
@@ -272,45 +266,47 @@
       if (!email) return showAlert("Email wajib diisi.");
       if (pass1.length < 6) return showAlert("Password minimal 6 karakter.");
       if (pass1 !== pass2) return showAlert("Password tidak sama.");
-
-      if (isRequesting && !requestedRole) {
-        return showAlert("Pilih role yang kamu ajukan (RT/PKK/KT).");
-      }
+      if (isRequesting && !requestedRole) return showAlert("Pilih role yang kamu ajukan (RT/PKK/KT).");
 
       try {
         setLoading(true);
+
+        // 0) cek apakah ini pendaftar pertama (belum ada super_admin)
+        const firstAdmin = await isFirstSuperAdmin();
 
         // 1) Create auth user
         const cred = await createUserWithEmailAndPassword(auth, email, pass1);
         const uid = cred.user.uid;
 
-        // 2) Create users/{uid}
-        // Default: warga
-        // Jika ajukan pengurus: tetap warga tapi status pending_verification (lebih aman)
+        // 2) Tentukan role final saat create user doc:
+        // - kalau user pertama -> super_admin (langsung aktif)
+        // - kalau bukan -> warga (atau pending_verification jika mengajukan)
+        const role = firstAdmin ? "super_admin" : "warga";
+        const status =
+          firstAdmin ? "active"
+          : (isRequesting ? "pending_verification" : "active");
+
         const userDoc = {
           uid,
           name,
           email,
           phone: phone || "",
-          neighborhoodId, // bisa null dulu
-          role: "warga",
-          orgScope: ["rt","pkk","kt"],
-          status: isRequesting ? "pending_verification" : "active",
-          address: {
-            rt: rt || "",
-            rw: rw || "",
-            detail: addressDetail || ""
-          },
-          verifiedBy: null,
-          verifiedAt: null,
+          neighborhoodId, // boleh null dulu
+          role,
+          status,
+          address: { rt: rt || "", rw: rw || "", detail: addressDetail || "" },
+
+          // audit
+          verifiedBy: firstAdmin ? uid : null,
+          verifiedAt: firstAdmin ? serverTimestamp() : null,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         };
 
         await setDoc(doc(db, "users", uid), userDoc, { merge: true });
 
-        // 3) If requesting role, create role_requests
-        if (isRequesting) {
+        // 3) Jika ajukan role (HANYA jika bukan super_admin pertama)
+        if (!firstAdmin && isRequesting) {
           await addDoc(collection(db, "role_requests"), {
             neighborhoodId,
             uid,
@@ -323,11 +319,11 @@
           });
         }
 
-        // 4) Mark onboarding done (biar index.html gak balik onboarding)
+        // 4) Mark onboarding done
         localStorage.setItem("guyub_onboarding_done", "1");
 
-        // 5) Go home (nanti home bisa tampilkan banner "menunggu verifikasi")
-        go(ROUTES.home);
+        // 5) Redirect sesuai role
+        go(routeByRole(role));
 
       } catch (err) {
         console.error(err);
